@@ -1,13 +1,24 @@
 [project]
 name = "deterministic-ai-debate"
 version = "0.1.0"
-description = "Add your description here"
+description = "Deterministic multi-agent AI debate system — thesis research"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=0.40.0",
+    "numpy>=1.26.0",
     "pydantic>=2.13.4",
+    "pydantic-settings>=2.0.0",
     "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
     "ruff>=0.15.13",
+    "sentence-transformers>=3.0.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
