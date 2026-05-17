@@ -1,3 +1,5 @@
+import json
+import re
 from abc import ABC, abstractmethod
 
 from src.debate.schemas.claim import ClaimPayloadSchema
@@ -21,6 +23,16 @@ class BaseAgent(ABC):
 
     def get_windowed_ledger(self, n: int) -> list[LedgerEntry]:
         return self._ledger[-n:]
+
+    @staticmethod
+    def _extract_json(text: str) -> dict:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            m = re.search(r"\{.*\}", text, re.DOTALL)
+            if m:
+                return json.loads(m.group())
+            raise ValueError(f"No JSON object found in LLM response: {text!r}")
 
     @abstractmethod
     def generate_claim(

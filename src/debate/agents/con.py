@@ -1,5 +1,3 @@
-import json
-
 import anthropic
 
 from src.debate.config import settings
@@ -11,7 +9,8 @@ from .base import BaseAgent
 
 _SYSTEM = (
     "You are a CON debater arguing that AI will NOT replace software engineers. "
-    "Respond ONLY with a JSON object: "
+    "You MUST respond with ONLY a raw JSON object — no markdown, no preamble, no explanation. "
+    "Output nothing except this exact structure: "
     '{"claim_text": "<your argument>", "addressed_claim_ids": ["<id>", ...]}'
 )
 
@@ -45,7 +44,7 @@ class ConAgent(BaseAgent):
             ],
         )
         self._tokens += msg.usage.input_tokens + msg.usage.output_tokens
-        data = json.loads(msg.content[0].text)
+        data = self._extract_json(msg.content[0].text)
         return ClaimPayloadSchema(
             agent_id="CON",
             round_number=round_number,
