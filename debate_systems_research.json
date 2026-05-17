@@ -1,25 +1,25 @@
 {
   "benchmark_metadata": {
-    "timestamp": "2026-05-17T13:32:28.169610+00:00",
+    "timestamp": "2026-05-17T18:15:39.753645+00:00",
     "n_runs": 1
   },
   "runs": [
     {
-      "tokens_per_debate": 3944,
-      "cost_per_debate": 0.011832,
+      "tokens_per_debate": 3967,
+      "cost_per_debate": 0.011901,
       "context_cache_efficiency": 0.0,
       "latency_per_round": [
-        10.048925000000054,
-        19.532541819000016,
-        25.647285540999974
+        12.402699530999598,
+        17.95379332900029,
+        23.50223895599993
       ],
-      "winner": "PRO"
+      "winner": "CON"
     }
   ],
   "aggregates": {
-    "mean_tokens_per_debate": 3944,
-    "mean_cost_per_debate": 0.011832,
+    "mean_tokens_per_debate": 3967,
+    "mean_cost_per_debate": 0.011901,
     "mean_cache_efficiency": 0.0,
-    "mean_latency_per_round": 18.409584120000016
+    "mean_latency_per_round": 17.952910605333273
   }
 }

@@ -9,8 +9,11 @@ from src.debate.config import settings
 from src.debate.engine.embeddings import EmbeddingService
 from src.debate.evaluation.judge import Judge
 from src.debate.evaluation.responsiveness import ResponsivenessCalculator
+from src.debate.logging import get_logger
 from src.debate.schemas.round import LedgerEntry, RoundSchema
 from src.debate.schemas.verdict import VerdictSchema
+
+_log = get_logger("pipeline")
 
 
 @dataclass
@@ -32,6 +35,7 @@ def run_debate(
     resp = ResponsivenessCalculator()
     rounds: list[RoundSchema] = []
     latencies: list[float] = []
+    _log.info(f"Debate started | max_rounds={max_rounds}")
 
     for rn in range(1, max_rounds + 1):
         t0 = time.perf_counter()
@@ -61,9 +65,11 @@ def run_debate(
             )
         )
         latencies.append(time.perf_counter() - t0)
+        _log.info(f"Round {rn}/{max_rounds} complete | lat={latencies[-1]:.3f}s")
 
     debate_id = str(uuid.uuid4())
     verdict = Judge().evaluate_debate(rounds, pro_agent, con_agent, debate_id)
+    _log.info(f"Verdict | winner={verdict.winner} | tiebreaker={verdict.tiebreaker_used}")
 
     total_tokens = sum(getattr(a, "_tokens", 0) for a in [pro_agent, con_agent])
     total_calls = max_rounds * 2
@@ -80,4 +86,7 @@ def run_debate(
 
 
 def run_benchmarks(n: int = 5, max_rounds: int = 10) -> list[DebateResult]:
-    return [run_debate(ProAgent(), ConAgent(), max_rounds) for _ in range(n)]
+    _log.info(f"Benchmark started | n={n} | max_rounds={max_rounds}")
+    results = [run_debate(ProAgent(), ConAgent(), max_rounds) for _ in range(n)]
+    _log.info(f"Benchmark complete | runs={n}")
+    return results

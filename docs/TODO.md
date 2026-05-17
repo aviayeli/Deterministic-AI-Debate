@@ -233,3 +233,63 @@ uv run python main.py --runs 5 --rounds 10
 | `main.py` ≤ 20 lines | `wc -l main.py` |
 | `pipeline.py` ≤ 150 lines | `wc -l src/debate/engine/pipeline.py` |
 | No hardcoded hyperparameters | `grep -r "0\.3\|0\.4" src/ --include="*.py"` (should hit only defaults in config.py) |
+
+---
+
+## Phase 4: Production-Grade Logging (FIFO Rotating Logger)
+
+**Goal**: Replace all `print()` calls with a structured, file-rotating logger. All parameters
+loaded from `config/logging_config.json`. Zero hardcoded values in Python.
+
+**Reference**: `docs/PRD_logging.md`
+
+### 4.1 — Tests First (`tests/test_logger.py`)
+
+- [ ] Test `get_logger("x")` returns a `DebateLogger` instance
+- [ ] Test `DebateLogger` exposes `.debug()`, `.info()`, `.warning()`, `.error()` methods
+- [ ] Test config loads `max_files` and `max_lines` from `config/logging_config.json` (not defaults)
+- [ ] Test `log_dir` is created on first use if it does not exist
+- [ ] Test a single log file is created after calling `.info("msg")`
+- [ ] Test log file contains the logged message string
+- [ ] Test line-count rotation: writing `max_lines + 1` lines creates a second log file
+- [ ] Test after rotation, the old file contains exactly `max_lines` lines
+- [ ] Test FIFO eviction: when `max_files + 1` files exist, oldest file is deleted
+- [ ] Test after FIFO eviction, exactly `max_files` files remain in `log_dir`
+- [ ] Test `get_logger("a")` and `get_logger("a")` return the same underlying logger (no handler duplication)
+- [ ] Test log format includes timestamp, level, name, and message fields
+- [ ] Test `emit()` is thread-safe: 10 concurrent threads each writing 50 lines produce no interleaved corruption
+
+### 4.2 — Implementation
+
+- [ ] `src/debate/logging/__init__.py` — exports `get_logger(name: str) -> DebateLogger`
+- [ ] `src/debate/logging/logger.py` — `LoggingConfig` dataclass, `FifoRotatingHandler`, `DebateLogger`
+- [ ] `logs/` added to `.gitignore`
+- [ ] `uv run ruff check .` — 0 errors
+- [ ] `find src tests main.py -name "*.py" | xargs wc -l` — no file ≥ 150 lines
+
+### 4.3 — Refactor: Replace `print()` with Logger
+
+- [ ] `main.py` — replace `print(f"Done ...")` with `logger.info(...)`
+- [ ] `src/debate/engine/pipeline.py` — add `INFO` logs for debate start, each round, verdict
+- [ ] `src/debate/agents/pro.py` — add `DEBUG` log for claim generation and token usage
+- [ ] `src/debate/agents/con.py` — add `DEBUG` log for claim generation and token usage
+- [ ] Verify: `grep -rn "print(" src/ main.py` returns 0 matches
+
+### Phase 4 Gate
+
+```bash
+# All tests green (including new test_logger.py)
+uv run pytest -v
+
+# Zero linter errors
+uv run ruff check .
+
+# No file ≥ 150 lines
+find src tests main.py -name "*.py" | xargs wc -l | grep -v total | awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS: all files under 150 lines"}'
+
+# No print() calls remain
+grep -rn "print(" src/ main.py && echo "FAIL: print() found" || echo "PASS: no print() calls"
+
+# No hardcoded logging values in Python
+grep -n "500\|\"logs/\"\|max_files\s*=\s*20" src/debate/logging/logger.py && echo "FAIL: hardcoded value" || echo "PASS: config-driven"
+```

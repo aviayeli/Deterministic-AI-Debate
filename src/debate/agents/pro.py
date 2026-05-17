@@ -2,10 +2,13 @@ import anthropic
 
 from src.debate.config import settings
 from src.debate.engine.ledger import LedgerManager
+from src.debate.logging import get_logger
 from src.debate.schemas.claim import ClaimPayloadSchema
 from src.debate.schemas.round import LedgerEntry
 
 from .base import BaseAgent
+
+_log = get_logger("pro_agent")
 
 _SYSTEM = (
     "You are a PRO debater arguing that AI WILL replace software engineers. "
@@ -43,7 +46,9 @@ class ProAgent(BaseAgent):
                 }
             ],
         )
-        self._tokens += msg.usage.input_tokens + msg.usage.output_tokens
+        used = msg.usage.input_tokens + msg.usage.output_tokens
+        self._tokens += used
+        _log.debug(f"Round {round_number} | tokens={used}")
         data = self._extract_json(msg.content[0].text)
         return ClaimPayloadSchema(
             agent_id="PRO",

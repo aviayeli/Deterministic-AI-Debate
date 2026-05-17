@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Runtime log files
+logs/
+
+# Environment and secrets
+.env
+
+# Test coverage artifacts
+.coverage
