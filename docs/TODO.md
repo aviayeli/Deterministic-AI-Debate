@@ -223,6 +223,81 @@ uv run python main.py --runs 5 --rounds 10
 | **2b** | BaseAgent V₁ isolation, Judge tiebreaker | `test_ledger.py` + `test_judge.py` green; no LLM in tiebreaker |
 | **3** | Pipeline, CLI, benchmark JSON export | Full suite green; line limit verified; JSON valid |
 
+---
+
+## Phase 5: Production-Grade API Gatekeeper & Watchdog
+
+**Goal**: All Anthropic API calls pass through a single `ApiGatekeeper`. Rate limiting,
+timeout enforcement, and retry-with-backoff are centralized and config-driven.
+
+**Reference**: `docs/PRD_gatekeeper.md` | Config: `config/rate_limits.json`
+
+### 5.1 — Tests First (`tests/test_gatekeeper.py`)
+
+All tests use `unittest.mock` — zero real network calls.
+
+**GatekeeperConfig**
+- [ ] Test config loads `requests_per_minute` from `config/rate_limits.json`
+- [ ] Test config loads `max_retries`, `timeout_seconds`, `backoff_factor` from JSON
+- [ ] Test config raises `FileNotFoundError` if `rate_limits.json` is missing
+
+**Rate Limiting**
+- [ ] Test a single `gatekeeper.call()` succeeds when bucket has tokens
+- [ ] Test `gatekeeper.call()` blocks (sleeps) when bucket is empty, then succeeds
+- [ ] Test that N calls within a minute do not exceed `requests_per_minute`
+
+**Timeout**
+- [ ] Test `gatekeeper.call()` raises `GatekeeperTimeoutError` when SDK raises `APITimeoutError` on every attempt
+- [ ] Test timeout is passed to the underlying SDK call as `timeout=timeout_seconds`
+
+**Retry Logic**
+- [ ] Test `gatekeeper.call()` retries on `RateLimitError` (429) up to `max_retries` times
+- [ ] Test `gatekeeper.call()` retries on `InternalServerError` with status 529
+- [ ] Test `gatekeeper.call()` does NOT retry on `AuthenticationError` (401)
+- [ ] Test `gatekeeper.call()` does NOT retry on `BadRequestError` (400)
+- [ ] Test after successful retry, the return value is the mock response (not an exception)
+- [ ] Test exponential backoff: sleep duration on retry 0 = `backoff_factor * (2**0) ± jitter`
+- [ ] Test all retries exhausted → `GatekeeperRateLimitError` raised (not swallowed)
+
+**Integration with Agents**
+- [ ] Test `ProAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
+- [ ] Test `ConAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
+- [ ] Test agents do NOT call `anthropic.Anthropic.messages.create()` directly (assert not called)
+
+### 5.2 — Implementation
+
+- [ ] `src/debate/gatekeeper/__init__.py` — exports `ApiGatekeeper`, `GatekeeperError`, `GatekeeperTimeoutError`, `GatekeeperRateLimitError`
+- [ ] `src/debate/gatekeeper/config.py` — `GatekeeperConfig` dataclass, loads `config/rate_limits.json`
+- [ ] `src/debate/gatekeeper/gatekeeper.py` — `ApiGatekeeper` class with token bucket, timeout, retry (≤ 150 lines)
+
+### 5.3 — Refactor: Wire Gatekeeper into Agents & Pipeline
+
+- [ ] `src/debate/agents/pro.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
+- [ ] `src/debate/agents/con.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
+- [ ] `src/debate/engine/pipeline.py` — instantiate `ApiGatekeeper` once, inject into both agents
+- [ ] Verify: `grep -rn "messages.create" src/debate/agents/` returns 0 matches
+
+### Phase 5 Gate
+
+```bash
+# All tests green (including new test_gatekeeper.py)
+uv run pytest -v
+
+# Zero linter errors
+uv run ruff check .
+
+# No file ≥ 150 lines
+find src tests main.py -name "*.py" | xargs wc -l | grep -v total | awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS: all files under 150 lines"}'
+
+# No direct Anthropic calls in agents
+grep -rn "messages.create" src/debate/agents/ && echo "FAIL: direct SDK call found" || echo "PASS: all calls via gatekeeper"
+
+# Coverage check
+uv run pytest --cov=src --cov-report=term-missing | tail -5
+```
+
+---
+
 ## Hard Constraints (never skip)
 
 | Check | Command |
@@ -230,9 +305,177 @@ uv run python main.py --runs 5 --rounds 10
 | All tests pass | `uv run pytest -v` |
 | Linter clean | `uv run ruff check .` |
 | No file ≥ 150 lines | `find src tests main.py -name "*.py" \| xargs wc -l` |
-| `main.py` ≤ 20 lines | `wc -l main.py` |
+| `main.py` ≤ 22 lines | `wc -l main.py` (--interactive adds 3 lines) |
 | `pipeline.py` ≤ 150 lines | `wc -l src/debate/engine/pipeline.py` |
 | No hardcoded hyperparameters | `grep -r "0\.3\|0\.4" src/ --include="*.py"` (should hit only defaults in config.py) |
+
+---
+
+## Phase 6: Advanced Features — SDK/CLI, Multithreading, Data Visualization
+
+**Goal**: Reference-project grade. Clean public SDK surface, interactive terminal UI,
+parallel benchmark execution, automated graph generation.
+
+**Reference**: `docs/PRD_advanced_features.md`
+
+### 6a — SDK Layer
+
+#### 6a.1 — Tests First (`tests/test_sdk.py`)
+
+- [ ] Test `DebateSDK()` instantiates without error (no real API call)
+- [ ] Test `DebateSDK(topic="custom topic")` stores topic and passes it to agents
+- [ ] Test `DebateSDK.run_single()` calls `run_debate()` exactly once (mock pipeline)
+- [ ] Test `DebateSDK.run_benchmark(n=2)` calls `run_debate()` exactly 2 times
+- [ ] Test `DebateSDK.export(results, path)` delegates to `BenchmarkReporter.export()`
+- [ ] Test `DebateSDK.generate_analysis(json_path, out_dir)` calls `analysis.generate_all()`
+- [ ] Test SDK raises `ValueError` if `run_single()` is called before a topic is set and no default exists
+- [ ] Test SDK exposes no internal module references (only `debate.sdk` needed in imports)
+
+#### 6a.2 — Implementation
+
+- [ ] `src/debate/sdk.py` — `DebateSDK` class (≤ 100 lines)
+- [ ] `src/debate/__init__.py` — re-export `DebateSDK` so `from debate import DebateSDK` works
+- [ ] `config/topics.json` — list of debate topics + default (already created in Phase 2)
+
+#### 6a Gate
+
+```bash
+uv run pytest tests/test_sdk.py -v
+uv run ruff check .
+wc -l src/debate/sdk.py   # must be ≤ 100
+```
+
+---
+
+### 6b — Interactive CLI
+
+#### 6b.1 — Tests First (`tests/test_cli.py`)
+
+- [ ] Test `menu.display_topics(["A", "B"])` prints numbered list without error
+- [ ] Test `menu.parse_choice("2", max_val=3)` returns `2`
+- [ ] Test `menu.parse_choice("0", max_val=3)` raises `ValueError` (out of range)
+- [ ] Test `menu.parse_choice("abc", max_val=3)` raises `ValueError` (non-integer)
+- [ ] Test `handlers.handle_topic_selection(sdk, topics, "1")` sets topic to `topics[0]`
+- [ ] Test `handlers.handle_run_single(sdk)` calls `sdk.run_single()` and returns result
+- [ ] Test `handlers.handle_run_benchmark(sdk, n=2)` calls `sdk.run_benchmark(n=2)`
+- [ ] Test `handlers.handle_generate_analysis(sdk)` calls `sdk.generate_analysis()` with correct paths
+- [ ] Test `main.py --interactive` flag triggers interactive loop (mock `menu.run_loop`)
+- [ ] Test `main.py` without `--interactive` flag retains existing argparse behaviour
+
+#### 6b.2 — Implementation
+
+- [ ] `src/debate/cli/__init__.py`
+- [ ] `src/debate/cli/menu.py` — `run_loop()`, `display_menu()`, `display_topics()`, `parse_choice()` (≤ 120 lines)
+- [ ] `src/debate/cli/handlers.py` — `handle_*` functions (≤ 100 lines)
+- [ ] `main.py` — add `--interactive` flag, dispatch to `menu.run_loop()` (stays ≤ 20 lines)
+
+#### 6b Gate
+
+```bash
+uv run pytest tests/test_cli.py -v
+uv run ruff check .
+wc -l src/debate/cli/menu.py     # ≤ 120
+wc -l src/debate/cli/handlers.py # ≤ 100
+wc -l main.py                    # ≤ 20
+```
+
+---
+
+### 6c — Multithreaded Benchmarks
+
+#### 6c.1 — Tests First (`tests/test_parallel_benchmarks.py`)
+
+- [ ] Test `run_benchmarks(n=3)` returns exactly 3 `DebateResult` objects (mock `run_debate`)
+- [ ] Test results are returned even when `run_debate` calls are non-deterministically ordered (futures)
+- [ ] Test `run_benchmarks` uses at most `MAX_WORKERS` concurrent threads (patch `ThreadPoolExecutor`)
+- [ ] Test `max_workers` is read from `GatekeeperConfig` (not hardcoded)
+- [ ] Test a single worker exception causes `run_benchmarks` to re-raise (no silent swallow)
+- [ ] Test `ApiGatekeeper` is instantiated exactly once per `run_benchmarks` call (shared across threads)
+- [ ] Test thread-safety: 4 concurrent `run_debate` mock calls all complete without deadlock (timeout=5s)
+
+#### 6c.2 — Implementation
+
+- [ ] `src/debate/engine/pipeline.py` — replace list comprehension with `ThreadPoolExecutor` (≤ 150 lines)
+- [ ] `src/debate/gatekeeper/config.py` — expose `max_workers: int` loaded from `config/rate_limits.json`
+- [ ] `src/debate/config.py` — add `MAX_WORKERS: int = 4` and `ASSETS_DIR: str = "assets/"`
+
+#### 6c Gate
+
+```bash
+uv run pytest tests/test_parallel_benchmarks.py -v
+uv run ruff check .
+wc -l src/debate/engine/pipeline.py  # ≤ 150
+# Verify max_workers not hardcoded in Python
+grep -n "max_workers\s*=\s*[0-9]" src/debate/engine/pipeline.py && echo "FAIL: hardcoded" || echo "PASS"
+```
+
+---
+
+### 6d — Data Visualization
+
+#### 6d.1 — Tests First (`tests/test_analysis.py`)
+
+- [ ] Test `generate_all(json_path, out_dir)` returns a list of 4 `Path` objects
+- [ ] Test all 4 returned paths exist on disk after the call (files are written)
+- [ ] Test returned filenames match: `latency_per_round.png`, `tokens_per_run.png`, `cache_efficiency.png`, `winner_distribution.png`
+- [ ] Test `generate_all` creates `out_dir` if it does not exist
+- [ ] Test `generate_all` raises `FileNotFoundError` if `json_path` does not exist
+- [ ] Test `generate_all` raises `KeyError` if JSON is missing `runs` key
+- [ ] Test DPI is loaded from `config/visualization_config.json` (not hardcoded)
+- [ ] Test format is loaded from `config/visualization_config.json` (not hardcoded)
+- [ ] Test `generate_all` with a 1-run JSON produces valid graphs (no crash on single-item stats)
+- [ ] Test `generate_all` with `n=5` runs produces `latency_per_round.png` with correct data shape
+
+#### 6d.2 — Implementation
+
+- [ ] `src/debate/analysis.py` — `generate_all()` + 4 `_plot_*` helpers (≤ 150 lines)
+- [ ] `config/visualization_config.json` — DPI, format, style, figsize, assets_dir (already created in Phase 2)
+- [ ] `assets/` — add to `.gitignore` (generated files)
+- [ ] `pyproject.toml` — add `matplotlib>=3.8.0` and `seaborn>=0.13.0`
+- [ ] `uv sync`
+
+#### 6d Gate
+
+```bash
+uv run pytest tests/test_analysis.py -v
+uv run ruff check .
+wc -l src/debate/analysis.py  # ≤ 150
+# Confirm assets/ is gitignored
+grep "assets/" .gitignore && echo "PASS" || echo "FAIL: add assets/ to .gitignore"
+```
+
+---
+
+### Phase 6 Full Gate
+
+```bash
+# All tests green (all phases)
+uv run pytest -v --tb=short
+
+# Coverage ≥ 85%
+uv run pytest --cov=src --cov-report=term-missing | tail -10
+
+# Zero linter errors
+uv run ruff check .
+
+# No file ≥ 150 lines
+find src tests main.py -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS: all files under 150 lines"}'
+
+# main.py stays ≤ 20 lines
+wc -l main.py
+
+# No hardcoded max_workers in Python
+grep -rn "ThreadPoolExecutor([0-9]" src/ && echo "FAIL: hardcoded workers" || echo "PASS"
+
+# Assets generated by analysis
+uv run python -c "
+from debate.sdk import DebateSDK
+sdk = DebateSDK()
+paths = sdk.generate_analysis('debate_systems_research.json', 'assets/')
+print('Generated:', [p.name for p in paths])
+"
+```
 
 ---
 

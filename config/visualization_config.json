@@ -1,0 +1,7 @@
+{
+  "assets_dir": "assets/",
+  "dpi": 150,
+  "format": "png",
+  "style": "seaborn-v0_8-darkgrid",
+  "figsize": [10, 6]
+}

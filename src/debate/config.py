@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     LEDGER_WINDOW: int = 3
     LLM_MODEL: str = "claude-sonnet-4-6"
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    MAX_WORKERS: int = 4
+    ASSETS_DIR: str = "assets/"
 
 
 settings = Settings()

@@ -1,0 +1,10 @@
+{
+  "topics": [
+    "Will AI replace software engineers?",
+    "Is remote work better than office work?",
+    "Should AI systems be fully open-source?",
+    "Does social media do more harm than good?",
+    "Should programming be a mandatory school subject?"
+  ],
+  "default": "Will AI replace software engineers?"
+}

@@ -1,7 +1,6 @@
-import anthropic
-
 from src.debate.config import settings
 from src.debate.engine.ledger import LedgerManager
+from src.debate.gatekeeper import ApiGatekeeper
 from src.debate.logging import get_logger
 from src.debate.schemas.claim import ClaimPayloadSchema
 from src.debate.schemas.round import LedgerEntry
@@ -16,17 +15,20 @@ _SYSTEM = (
     "Output nothing except this exact structure: "
     '{"claim_text": "<your argument>", "addressed_claim_ids": ["<id>", ...]}'
 )
+_SUFFIX = (
+    " You MUST respond with ONLY a raw JSON object — no markdown, no preamble. "
+    'Output: {"claim_text": "<your argument>", "addressed_claim_ids": ["<id>", ...]}'
+)
 
 
 class ConAgent(BaseAgent):
-    def __init__(self) -> None:
+    def __init__(self, gatekeeper: ApiGatekeeper, topic: str | None = None) -> None:
         super().__init__()
-        self._client: anthropic.Anthropic | None = None
-
-    def _client_or_init(self) -> anthropic.Anthropic:
-        if self._client is None:
-            self._client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        return self._client
+        self._gatekeeper = gatekeeper
+        self._system = (
+            f"You are a CON debater. Position: {topic} — DISAGREE.{_SUFFIX}"
+            if topic else _SYSTEM
+        )
 
     def generate_claim(
         self, round_number: int, opponent_ledger: list[LedgerEntry]
@@ -34,11 +36,11 @@ class ConAgent(BaseAgent):
         context = LedgerManager(opponent_ledger).serialize_for_llm(
             window=settings.LEDGER_WINDOW
         )
-        msg = self._client_or_init().messages.create(
+        msg = self._gatekeeper.call(
             model=settings.LLM_MODEL,
             max_tokens=512,
             temperature=0,
-            system=_SYSTEM,
+            system=self._system,
             messages=[
                 {
                     "role": "user",

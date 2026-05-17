@@ -1,11 +1,16 @@
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+
+import anthropic
 
 from src.debate.agents.base import BaseAgent
 from src.debate.agents.con import ConAgent
 from src.debate.agents.pro import ProAgent
 from src.debate.config import settings
+from src.debate.gatekeeper import ApiGatekeeper
+from src.debate.gatekeeper.config import GatekeeperConfig
 from src.debate.engine.embeddings import EmbeddingService
 from src.debate.evaluation.judge import Judge
 from src.debate.evaluation.responsiveness import ResponsivenessCalculator
@@ -85,8 +90,21 @@ def run_debate(
     )
 
 
-def run_benchmarks(n: int = 5, max_rounds: int = 10) -> list[DebateResult]:
-    _log.info(f"Benchmark started | n={n} | max_rounds={max_rounds}")
-    results = [run_debate(ProAgent(), ConAgent(), max_rounds) for _ in range(n)]
+def run_benchmarks(
+    n: int = 5, max_rounds: int = 10, topic: str | None = None
+) -> list[DebateResult]:
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    gk_config = GatekeeperConfig.load()
+    gk = ApiGatekeeper(client, gk_config)
+    max_workers = gk_config.max_workers
+    _log.info(f"Benchmark | n={n} | rounds={max_rounds} | workers={max_workers}")
+
+    def _single() -> DebateResult:
+        return run_debate(ProAgent(gk, topic=topic), ConAgent(gk, topic=topic), max_rounds)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(_single) for _ in range(n)]
+        results = [f.result() for f in as_completed(futures)]
+
     _log.info(f"Benchmark complete | runs={n}")
     return results

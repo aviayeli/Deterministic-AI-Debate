@@ -1,0 +1,9 @@
+{
+  "requests_per_minute": 50,
+  "max_retries": 3,
+  "timeout_seconds": 30,
+  "backoff_factor": 1.0,
+  "retryable_status_codes": [429, 529],
+  "queue_maxsize": 100,
+  "max_workers": 4
+}
