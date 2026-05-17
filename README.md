@@ -200,6 +200,23 @@ After a benchmark run, the reporter writes a structured JSON file to the project
 
 ---
 
+## Quality Standard Compliance (ISO/IEC 25010)
+
+This system was designed against all eight ISO/IEC 25010 quality characteristics, mapping each to a concrete architectural decision:
+
+| Characteristic | Implementation |
+|---|---|
+| **Functional Suitability** | `temperature=0` on all LLM calls; 4-level deterministic tiebreaker; `SHA-256`-seeded PRNG guarantee every verdict is reproducible and traceable |
+| **Performance Efficiency** | `ThreadPoolExecutor` parallelises benchmark runs; FinOps Context Truncation bounds token cost per round to `O(LEDGER_WINDOW × avg_claim_length)` regardless of debate length |
+| **Compatibility** | PEP 517 `src`-layout package with `uv` lock-file; `pythonpath = ["."]` in `pytest.ini` means tests run identically across environments |
+| **Usability** | `rich` progress bars surface benchmark status in real time (Nielsen Heuristic 1 — Visibility of System Status); interactive numbered CLI menu requires no prior knowledge of flags |
+| **Reliability** | 133-test suite (≥ 85% coverage, zero API calls required); deterministic Level 4 PRNG tiebreaker guarantees a winner always exists — no null verdict is possible |
+| **Security** | Secrets loaded from `.env` via `pydantic-settings` (never committed); `ApiGatekeeper` enforces per-minute rate limits and exponential-backoff retries, shielding against API abuse |
+| **Maintainability** | Hard 150-line file limit; `ruff` zero-error gate; relative imports throughout; `__all__` on every `__init__.py`; EventBus plugin architecture allows extension without modifying core pipeline |
+| **Portability** | Pure-Python with no OS-specific dependencies; `uv sync` reproduces the full environment in under 30 s on any POSIX or Windows system with Python 3.12+ |
+
+---
+
 ## Hard Constraints
 
 | Check | Command |

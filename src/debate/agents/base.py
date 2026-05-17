@@ -2,8 +2,8 @@ import json
 import re
 from abc import ABC, abstractmethod
 
-from src.debate.schemas.claim import ClaimPayloadSchema
-from src.debate.schemas.round import LedgerEntry
+from ..schemas.claim import ClaimPayloadSchema
+from ..schemas.round import LedgerEntry
 
 
 class BaseAgent(ABC):
@@ -28,11 +28,11 @@ class BaseAgent(ABC):
     def _extract_json(text: str) -> dict:
         try:
             return json.loads(text)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
             m = re.search(r"\{.*\}", text, re.DOTALL)
             if m:
                 return json.loads(m.group())
-            raise ValueError(f"No JSON object found in LLM response: {text!r}")
+            raise ValueError(f"No JSON object found in LLM response: {text!r}") from exc
 
     @abstractmethod
     def generate_claim(

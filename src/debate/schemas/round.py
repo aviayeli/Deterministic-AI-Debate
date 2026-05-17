@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from src.debate.schemas.claim import ClaimPayloadSchema
+from .claim import ClaimPayloadSchema
 
 
 class LedgerEntry(BaseModel):

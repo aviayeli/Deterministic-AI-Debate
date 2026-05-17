@@ -6,23 +6,25 @@ from unittest.mock import MagicMock, patch
 import anthropic
 import pytest
 
-from src.debate.gatekeeper import ApiGatekeeper, GatekeeperRateLimitError, GatekeeperTimeoutError
+from src.debate.gatekeeper import (
+    ApiGatekeeper,
+    GatekeeperRateLimitError,
+    GatekeeperTimeoutError,
+)
 from src.debate.gatekeeper.config import GatekeeperConfig
 
 _SLP = "src.debate.gatekeeper.gatekeeper.time.sleep"
 _MON = "src.debate.gatekeeper.gatekeeper.time.monotonic"
 _CFG = {
     "requests_per_minute": 50, "max_retries": 3, "timeout_seconds": 30.0,
-    "backoff_factor": 1.0, "retryable_status_codes": [429, 529], "queue_maxsize": 100,
-}
+    "backoff_factor": 1.0, "retryable_status_codes": [429, 529], "queue_maxsize": 100}
 
 
 def _cfg(**kw) -> GatekeeperConfig:
     return GatekeeperConfig(
         requests_per_minute=kw.get("rpm", 60), max_retries=kw.get("retries", 3),
         timeout_seconds=30.0, backoff_factor=kw.get("backoff", 0.0),
-        retryable_status_codes=[429, 529], queue_maxsize=100,
-    )
+        retryable_status_codes=[429, 529], queue_maxsize=100)
 
 
 def _make(retries: int = 3) -> tuple[ApiGatekeeper, MagicMock]:
@@ -33,8 +35,7 @@ def _make(retries: int = 3) -> tuple[ApiGatekeeper, MagicMock]:
 def _ok() -> MagicMock:
     return MagicMock(
         content=[MagicMock(text='{"claim_text":"x","addressed_claim_ids":[]}')],
-        usage=MagicMock(input_tokens=10, output_tokens=5),
-    )
+        usage=MagicMock(input_tokens=10, output_tokens=5))
 
 
 def test_config_loads_fields(tmp_path: Path) -> None:
@@ -82,8 +83,7 @@ def test_retries_on_429_and_returns_success(mock_sleep) -> None:
     gk, client = _make(retries=2)
     ok = _ok()
     client.messages.create.side_effect = [
-        anthropic.RateLimitError("rl", response=MagicMock(status_code=429), body={}), ok,
-    ]
+        anthropic.RateLimitError("rl", response=MagicMock(status_code=429), body={}), ok]
     assert gk.call(model="m", max_tokens=10, messages=[]) is ok
     assert client.messages.create.call_count == 2
 

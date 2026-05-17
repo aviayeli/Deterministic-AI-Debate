@@ -2,8 +2,8 @@ import hashlib
 import random
 from typing import Any
 
-from src.debate.schemas.round import LedgerEntry, RoundSchema
-from src.debate.schemas.verdict import VerdictSchema
+from ..schemas.round import LedgerEntry, RoundSchema
+from ..schemas.verdict import VerdictSchema
 
 
 def _mean(values: list[float]) -> float:
@@ -20,7 +20,7 @@ def _v1_distance(agent: Any) -> float:
     v1: list[float] | None = getattr(agent, "v1_embedding", None)
     if not ledger or v1 is None or ledger[-1].embedding is None:
         return 0.0
-    from src.debate.engine.embeddings import EmbeddingService
+    from ..engine.embeddings import EmbeddingService
 
     return EmbeddingService().cosine_distance(ledger[-1].embedding, v1)
 

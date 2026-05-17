@@ -1,9 +1,29 @@
 [project]
 name = "deterministic-ai-debate"
-version = "0.1.0"
-description = "Deterministic multi-agent AI debate system — thesis research"
+version = "0.2.0"
+description = "Deterministic multi-agent AI debate system with hooks, plugin architecture, and ISO/IEC 25010 compliance"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Avi Ayeli", email = "avi.ayeli@gmail.com" }]
 requires-python = ">=3.12"
+keywords = [
+    "ai",
+    "debate",
+    "multi-agent",
+    "llm",
+    "deterministic",
+    "benchmark",
+    "anthropic",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "anthropic>=0.40.0",
     "numpy>=1.26.0",
@@ -12,11 +32,25 @@ dependencies = [
     "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
+    "rich>=13.0.0",
     "ruff>=0.15.13",
     "sentence-transformers>=3.0.0",
     "matplotlib>=3.8.0",
     "seaborn>=0.13.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/aviayeli/deterministic-ai-debate"
+Issues = "https://github.com/aviayeli/deterministic-ai-debate/issues"
+
+[project.scripts]
+debate = "debate.cli.entry:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -24,6 +58,10 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
 
 [dependency-groups]
 dev = [

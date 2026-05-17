@@ -311,6 +311,174 @@ uv run pytest --cov=src --cov-report=term-missing | tail -5
 
 ---
 
+## Phase 7: Hooks & Plugin Architecture
+
+**Goal**: Implement a thread-safe, typed `EventBus` with six lifecycle hook
+points. External plugins register callables against named events via
+`DebateSDK.on()` — zero coupling to core internals required.
+
+**Reference**: `docs/PRD_plugins_and_packaging.md §2`
+
+### 7.1 — Tests First (`tests/test_events.py`)
+
+- [ ] Test `EventBus.emit()` with no handlers is a no-op (no exception raised)
+- [ ] Test a registered handler is called exactly once per `emit()`
+- [ ] Test multiple handlers for the same event are all called, in registration order
+- [ ] Test handler exception propagates out of `emit()` (not swallowed)
+- [ ] Test `on()` is thread-safe: 20 concurrent registrations produce no lost handlers
+- [ ] Test `run_debate()` with a recording bus fires all 6 event types in correct sequence
+- [ ] Test `DebateSDK.on()` delegates to the internal `EventBus` instance
+- [ ] Test plugin registered after `DebateSDK()` but before `run_single()` fires correctly
+
+### 7.2 — Implementation
+
+- [ ] `src/debate/events/types.py` — six event dataclasses: `DebateStartEvent`, `RoundStartEvent`, `AgentReplyEvent`, `RoundEndEvent`, `BeforeEvaluationEvent`, `DebateEndEvent` (≤ 80 lines)
+- [ ] `src/debate/events/bus.py` — `EventBus` with `on()` (locked) and `emit()` (lock-free read) (≤ 60 lines)
+- [ ] `src/debate/events/__init__.py` — re-exports `EventBus` + all event types with `__all__`
+- [ ] `src/debate/engine/pipeline.py` — `run_debate()` accepts `bus: EventBus | None = None`; fires 6 event types at correct lifecycle points; `run_benchmarks()` passes shared bus
+- [ ] `src/debate/sdk.py` — add `self._bus = EventBus()`; expose `sdk.on(event, handler)`; pass `self._bus` to `run_debate()` and `run_benchmarks()`
+
+### Phase 7 Gate
+
+```bash
+uv run pytest tests/test_events.py -v
+uv run ruff check .
+find src tests main.py -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS"}'
+```
+
+---
+
+## Phase 8: Official Python Package Structure
+
+**Goal**: Migrate all internal `src.debate.*` absolute imports to relative
+imports; populate `__all__` in every `__init__.py`; add a CLI entry point;
+configure `pyproject.toml` package discovery so `pip install .` works.
+
+**Reference**: `docs/PRD_plugins_and_packaging.md §3`
+
+### 8.1 — Tests First
+
+All existing tests serve as the regression suite — they must remain green
+after every import migration. No new test file is required for this phase.
+Run `uv run pytest -v` after each file is migrated.
+
+### 8.2 — Relative Import Migration
+
+Migrate each file from `from src.debate.X import Y` to `from ..X import Y`
+(or `from .X import Y` for same-package imports):
+
+- [ ] `src/debate/agents/base.py`
+- [ ] `src/debate/agents/pro.py`
+- [ ] `src/debate/agents/con.py`
+- [ ] `src/debate/engine/pipeline.py`
+- [ ] `src/debate/engine/ledger.py`
+- [ ] `src/debate/engine/embeddings.py`
+- [ ] `src/debate/evaluation/judge.py`
+- [ ] `src/debate/evaluation/responsiveness.py`
+- [ ] `src/debate/evaluation/semantic_drift.py`
+- [ ] `src/debate/gatekeeper/gatekeeper.py`
+- [ ] `src/debate/gatekeeper/config.py`
+- [ ] `src/debate/benchmarks/reporter.py`
+- [ ] `src/debate/cli/menu.py`
+- [ ] `src/debate/cli/handlers.py`
+- [ ] `src/debate/sdk.py`
+- [ ] `src/debate/analysis.py`
+- [ ] `src/debate/config.py`
+
+### 8.3 — `__all__` Population
+
+Add `__all__` to every empty `__init__.py` and update the two that already
+have it (`gatekeeper`, `logging`) to verify completeness:
+
+- [ ] `src/debate/__init__.py` — `["DebateSDK"]`
+- [ ] `src/debate/agents/__init__.py` — `["BaseAgent", "ProAgent", "ConAgent"]`
+- [ ] `src/debate/engine/__init__.py` — `["DebateResult", "run_debate", "run_benchmarks"]`
+- [ ] `src/debate/evaluation/__init__.py` — `["Judge", "ResponsivenessCalculator", "SemanticDriftEvaluator", "DriftResult"]`
+- [ ] `src/debate/schemas/__init__.py` — `["ClaimPayloadSchema", "EvidenceSchema", "LedgerEntry", "RoundSchema", "VerdictSchema"]`
+- [ ] `src/debate/benchmarks/__init__.py` — `["BenchmarkReporter"]`
+- [ ] `src/debate/cli/__init__.py` — `["run_loop"]`
+
+### 8.4 — Entry Point
+
+- [ ] `src/debate/cli/entry.py` — thin argparse wrapper ≤ 20 lines; mirrors `main.py` but importable
+- [ ] `pyproject.toml` — add `[project.scripts] debate = "debate.cli.entry:main"` and `[tool.setuptools.packages.find]`
+- [ ] `main.py` — delegate to `debate.cli.entry:main()` (stays ≤ 22 lines)
+
+### Phase 8 Gate
+
+```bash
+# All tests still green after import migration
+uv run pytest -v
+
+# Zero absolute src.debate imports remain in src/
+grep -rn "from src\.debate" src/ && echo "FAIL: absolute imports remain" || echo "PASS"
+
+# Ruff clean
+uv run ruff check .
+
+# Package installs correctly in a fresh venv
+uv pip install -e . --quiet && python -c "from debate import DebateSDK; print('PASS')"
+```
+
+---
+
+## Phase 9: ISO/IEC 25010 & Nielsen's Heuristics Compliance
+
+**Goal**: Add `rich` progress bars to `run_benchmarks()` and the interactive
+CLI benchmark handler; add an ISO/IEC 25010 compliance section to `README.md`.
+
+**Reference**: `docs/PRD_plugins_and_packaging.md §4`
+
+### 9.1 — Tests First (`tests/test_progress.py`)
+
+- [ ] Test `run_benchmarks(n=2)` completes without error when `rich` is available
+- [ ] Test progress display is suppressed (no output) when running under pytest (no TTY)
+- [ ] Test `handle_run_benchmark()` in handlers.py calls `run_benchmark()` and returns results
+
+### 9.2 — Implementation
+
+- [ ] `src/debate/engine/pipeline.py` — wrap `ThreadPoolExecutor` block in `rich.progress.Progress`; guard with `if sys.stdout.isatty()` so CI logs stay clean
+- [ ] `src/debate/cli/handlers.py` — `handle_run_benchmark()` shows per-run progress via `rich` Live display
+- [ ] `pyproject.toml` — `rich>=13.0.0` already added (Phase 2)
+- [ ] `README.md` — add `## Quality Standard Compliance (ISO/IEC 25010)` section with 8-row table (see PRD §4.2)
+
+### Phase 9 Gate
+
+```bash
+uv run pytest tests/test_progress.py -v
+uv run ruff check .
+# Verify rich progress renders (visual check — run manually)
+uv run python main.py --runs 2 --rounds 2
+# Confirm README section exists
+grep -c "ISO/IEC 25010" README.md && echo "PASS" || echo "FAIL"
+```
+
+---
+
+## Phase 7–9 Full Gate
+
+```bash
+# All tests green (coverage ≥ 85%)
+uv run pytest -v --tb=short
+uv run pytest --cov=src --cov-report=term-missing | tail -5
+
+# Zero linter errors
+uv run ruff check .
+
+# No file ≥ 150 lines
+find src tests main.py -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS: all files under 150 lines"}'
+
+# No absolute src.debate imports
+grep -rn "from src\.debate" src/ && echo "FAIL" || echo "PASS: all imports relative"
+
+# Package entry point works
+uv run debate --help
+```
+
+---
+
 ## Phase 6: Advanced Features — SDK/CLI, Multithreading, Data Visualization
 
 **Goal**: Reference-project grade. Clean public SDK surface, interactive terminal UI,

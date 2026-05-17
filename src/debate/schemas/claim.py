@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 from uuid import uuid4
 
@@ -20,5 +20,5 @@ class ClaimPayloadSchema(BaseModel):
     addressed_claim_ids: list[str]
     evidence: list[EvidenceSchema] = Field(default_factory=list)
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )

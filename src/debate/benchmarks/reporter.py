@@ -1,9 +1,9 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from statistics import mean
 
-from src.debate.engine.pipeline import DebateResult
+from ..engine.pipeline import DebateResult
 
 
 class BenchmarkReporter:
@@ -12,7 +12,7 @@ class BenchmarkReporter:
         path = Path(path)
         data = {
             "benchmark_metadata": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "n_runs": len(results),
             },
             "runs": [

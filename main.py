@@ -1,4 +1,5 @@
 import argparse
+
 from src.debate.benchmarks.reporter import BenchmarkReporter
 from src.debate.engine.pipeline import run_benchmarks
 from src.debate.logging import get_logger

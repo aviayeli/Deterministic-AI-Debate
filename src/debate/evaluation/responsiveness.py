@@ -1,5 +1,5 @@
-from src.debate.schemas.claim import ClaimPayloadSchema
-from src.debate.schemas.round import LedgerEntry
+from ..schemas.claim import ClaimPayloadSchema
+from ..schemas.round import LedgerEntry
 
 
 class ResponsivenessCalculator:

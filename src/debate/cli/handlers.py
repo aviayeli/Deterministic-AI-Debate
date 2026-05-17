@@ -4,12 +4,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.debate.benchmarks.reporter import BenchmarkReporter
-from src.debate.cli.menu import display_topics, parse_choice
+from ..benchmarks.reporter import BenchmarkReporter
+from .menu import display_topics, parse_choice
 
 if TYPE_CHECKING:
-    from src.debate.engine.pipeline import DebateResult
-    from src.debate.sdk import DebateSDK
+    from ..engine.pipeline import DebateResult
+    from ..sdk import DebateSDK
 
 _OUTPUT_JSON = Path("debate_systems_research.json")
 _ASSETS_DIR = Path("assets/")

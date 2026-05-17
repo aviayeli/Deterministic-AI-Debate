@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.debate.cli.menu import display_topics, parse_choice
 from src.debate.cli.handlers import (
     handle_generate_analysis,
     handle_run_benchmark,
@@ -12,6 +11,7 @@ from src.debate.cli.handlers import (
     handle_topic_selection,
     handle_view_results,
 )
+from src.debate.cli.menu import display_topics, parse_choice
 
 _HANDLERS = "src.debate.cli.handlers"
 _MENU = "src.debate.cli.menu"

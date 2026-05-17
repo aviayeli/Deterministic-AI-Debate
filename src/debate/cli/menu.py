@@ -37,22 +37,22 @@ def display_topics(topics: list[str]) -> None:
 def parse_choice(raw: str, max_val: int) -> int:
     try:
         val = int(raw.strip())
-    except ValueError:
-        raise ValueError(f"Expected an integer, got: {raw!r}")
+    except ValueError as exc:
+        raise ValueError(f"Expected an integer, got: {raw!r}") from exc
     if not (1 <= val <= max_val):
         raise ValueError(f"Choice {val} out of range [1, {max_val}]")
     return val
 
 
 def run_loop(sdk: object | None = None) -> None:
-    from src.debate.cli.handlers import (
+    from ..sdk import DebateSDK
+    from .handlers import (
         handle_generate_analysis,
         handle_run_benchmark,
         handle_run_single,
         handle_topic_selection,
         handle_view_results,
     )
-    from src.debate.sdk import DebateSDK
 
     topics = load_topics()
     if sdk is None:

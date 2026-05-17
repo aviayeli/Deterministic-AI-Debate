@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from src.debate.config import Settings
-from src.debate.engine.embeddings import EmbeddingService
+from ..config import Settings
+from ..engine.embeddings import EmbeddingService
 
 
 class DriftResult(BaseModel):

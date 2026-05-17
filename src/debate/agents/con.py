@@ -1,10 +1,9 @@
-from src.debate.config import settings
-from src.debate.engine.ledger import LedgerManager
-from src.debate.gatekeeper import ApiGatekeeper
-from src.debate.logging import get_logger
-from src.debate.schemas.claim import ClaimPayloadSchema
-from src.debate.schemas.round import LedgerEntry
-
+from ..config import settings
+from ..engine.ledger import LedgerManager
+from ..gatekeeper import ApiGatekeeper
+from ..logging import get_logger
+from ..schemas.claim import ClaimPayloadSchema
+from ..schemas.round import LedgerEntry
 from .base import BaseAgent
 
 _log = get_logger("con_agent")

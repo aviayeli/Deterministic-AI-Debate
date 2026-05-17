@@ -1,9 +1,11 @@
 """Data visualization for debate benchmark results."""
+import contextlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
@@ -25,10 +27,8 @@ class _VizConfig:
 
 
 def _apply_style(style: str) -> None:
-    try:
+    with contextlib.suppress(OSError):
         plt.style.use(style)
-    except OSError:
-        pass
 
 
 def _plot_latency(runs: list[dict], out_dir: Path, cfg: "_VizConfig") -> Path:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from src.debate.config import settings
+from ..config import settings
 
 
 class EmbeddingService:
