@@ -4,8 +4,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from src.debate.cli.forecaster import confirm_benchmark, estimate_cost, estimate_tokens
 
+from src.debate.cli.forecaster import confirm_benchmark, estimate_cost, estimate_tokens
 from src.debate.cli.handlers import handle_run_benchmark
 
 _HANDLERS = "src.debate.cli.handlers"
