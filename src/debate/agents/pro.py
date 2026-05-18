@@ -26,15 +26,19 @@ _SUFFIX = (
 
 class ProAgent(BaseAgent):
     def __init__(
-        self, gatekeeper: ApiGatekeeper, topic: str | None = None, search_tool: Any = None
+        self, gatekeeper: ApiGatekeeper, topic: str | None = None,
+        search_tool: Any = None, extra_instructions: str = "", fact_checker: Any = None,
     ) -> None:
         super().__init__()
         self._gatekeeper = gatekeeper
         self._search_tool = search_tool
+        self._fact_checker = fact_checker
         self._system = (
             f"You are a PRO debater. Position: {topic} — AGREE.{_SUFFIX}"
             if topic else _SYSTEM
         )
+        if extra_instructions:
+            self._system += f"\n{extra_instructions}"
 
     def generate_claim(
         self, round_number: int, opponent_ledger: list[LedgerEntry]
@@ -60,10 +64,15 @@ class ProAgent(BaseAgent):
         used = msg.usage.input_tokens + msg.usage.output_tokens
         self._tokens += used
         _log.debug(f"Round {round_number} | tokens={used}")
+        claim_text = data["claim_text"]
+        if self._fact_checker and opponent_ledger:
+            proof = self._fact_checker.check(opponent_ledger[-1].claim.claim_text)
+            if proof:
+                claim_text = self._fact_checker.format_objection(proof, claim_text)
         return ClaimPayloadSchema(
             agent_id="PRO",
             round_number=round_number,
             stance="PRO",
-            claim_text=data["claim_text"],
+            claim_text=claim_text,
             addressed_claim_ids=data.get("addressed_claim_ids", []),
         )

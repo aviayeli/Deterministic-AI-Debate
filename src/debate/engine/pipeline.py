@@ -8,8 +8,6 @@ import anthropic
 from rich.progress import Progress
 
 from ..agents.base import BaseAgent
-from ..agents.con import ConAgent
-from ..agents.pro import ProAgent
 from ..config import settings
 from ..evaluation.judge import Judge
 from ..evaluation.responsiveness import ResponsivenessCalculator
@@ -27,6 +25,7 @@ from ..gatekeeper.config import GatekeeperConfig
 from ..logging import get_logger
 from ..schemas.round import LedgerEntry, RoundSchema
 from ..schemas.verdict import VerdictSchema
+from .agents_factory import make_agents
 from .embeddings import EmbeddingService
 
 _log = get_logger("pipeline")
@@ -134,9 +133,7 @@ def run_benchmarks(
     _log.info(f"Benchmark | n={n} | rounds={max_rounds} | workers={max_workers}")
 
     def _single() -> DebateResult:
-        return run_debate(
-            ProAgent(gk, topic=topic), ConAgent(gk, topic=topic), max_rounds
-        )
+        return run_debate(*make_agents(gk, topic), max_rounds)
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = [pool.submit(_single) for _ in range(n)]
