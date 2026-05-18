@@ -1,9 +1,14 @@
 import json
 import re
 from abc import ABC, abstractmethod
+from typing import Any
 
+from ..logging import get_logger
 from ..schemas.claim import ClaimPayloadSchema
 from ..schemas.round import LedgerEntry
+
+_log = get_logger("agent_base")
+_JSON_PARSE_RETRIES = 3
 
 
 class BaseAgent(ABC):
@@ -33,6 +38,24 @@ class BaseAgent(ABC):
             if m:
                 return json.loads(m.group())
             raise ValueError(f"No JSON object found in LLM response: {text!r}") from exc
+
+    def _call_json(
+        self, gatekeeper: Any, *, max_retries: int = _JSON_PARSE_RETRIES, **kwargs: Any
+    ) -> tuple[Any, dict]:
+        """Call the LLM, retrying on JSON parse failure (e.g. truncated output)."""
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            msg = gatekeeper.call(**kwargs)
+            try:
+                return msg, self._extract_json(msg.content[0].text)
+            except (ValueError, json.JSONDecodeError) as exc:
+                last_exc = exc
+                _log.warning(
+                    f"JSON parse attempt {attempt + 1}/{max_retries} failed: {exc!r}"
+                )
+        raise ValueError(
+            f"JSON parse failed after {max_retries} attempts"
+        ) from last_exc
 
     @abstractmethod
     def generate_claim(

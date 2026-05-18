@@ -35,9 +35,10 @@ class ConAgent(BaseAgent):
         context = LedgerManager(opponent_ledger).serialize_for_llm(
             window=settings.LEDGER_WINDOW
         )
-        msg = self._gatekeeper.call(
+        msg, data = self._call_json(
+            self._gatekeeper,
             model=settings.LLM_MODEL,
-            max_tokens=512,
+            max_tokens=4096,
             temperature=0,
             system=self._system,
             messages=[
@@ -50,7 +51,6 @@ class ConAgent(BaseAgent):
         used = msg.usage.input_tokens + msg.usage.output_tokens
         self._tokens += used
         _log.debug(f"Round {round_number} | tokens={used}")
-        data = self._extract_json(msg.content[0].text)
         return ClaimPayloadSchema(
             agent_id="CON",
             round_number=round_number,

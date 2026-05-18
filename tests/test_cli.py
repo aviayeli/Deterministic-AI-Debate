@@ -71,7 +71,14 @@ def test_handle_run_single_calls_sdk(capsys) -> None:
     sdk = _sdk()
     result = MagicMock()
     result.verdict.winner = "PRO"
-    result.rounds = [MagicMock()] * 3
+    result.verdict.pro_score = 0.75
+    result.verdict.con_score = 0.60
+    result.verdict.reasoning = "PRO arguments were stronger."
+    rnd = MagicMock()
+    rnd.round_number = 1
+    rnd.pro_claim.claim_text = "AI will replace engineers."
+    rnd.con_claim.claim_text = "AI will augment, not replace."
+    result.rounds = [rnd]
     sdk.run_single.return_value = result
     handle_run_single(sdk)
     sdk.run_single.assert_called_once()

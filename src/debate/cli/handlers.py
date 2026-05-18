@@ -29,10 +29,34 @@ def handle_topic_selection(sdk: DebateSDK, topics: list[str]) -> None:
     print(f"  Topic set to: {sdk._topic}")
 
 
+def _print_debate_result(result: DebateResult) -> None:
+    from rich.console import Console
+    from rich.panel import Panel
+
+    console = Console()
+    sep = "─" * 64
+    console.print(f"\n[bold cyan]{sep}[/bold cyan]")
+    console.print(f"[bold]  DEBATE TRANSCRIPT[/bold]  ({len(result.rounds)} round(s))")
+    console.print(f"[bold cyan]{sep}[/bold cyan]")
+    for rnd in result.rounds:
+        console.print(f"\n[bold yellow]  Round {rnd.round_number}[/bold yellow]")
+        console.print(Panel(str(rnd.pro_claim.claim_text), title="[green]PRO[/green]", expand=False))
+        console.print(Panel(str(rnd.con_claim.claim_text), title="[red]CON[/red]", expand=False))
+    v = result.verdict
+    winner_style = "green" if v.winner == "PRO" else "red"
+    console.print(f"\n[bold cyan]{sep}[/bold cyan]")
+    console.print(
+        f"[bold]VERDICT:[/bold] [{winner_style}]{v.winner}[/{winner_style}] wins"
+        f"  (PRO {v.pro_score:.2f} vs CON {v.con_score:.2f})"
+    )
+    console.print(Panel(str(v.reasoning), title="[bold]Judge's Reasoning[/bold]", expand=False))
+    console.print(f"[bold cyan]{sep}[/bold cyan]\n")
+
+
 def handle_run_single(sdk: DebateSDK) -> DebateResult:
     print(f"  Running debate: '{sdk._topic}' ...")
     result = sdk.run_single()
-    print(f"  Winner: {result.verdict.winner} | Rounds: {len(result.rounds)}")
+    _print_debate_result(result)
     return result
 
 

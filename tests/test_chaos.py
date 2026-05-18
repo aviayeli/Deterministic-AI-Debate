@@ -98,6 +98,25 @@ def test_agent_recovers_with_valid_response_after_chaos(mock_sleep) -> None:
     assert ProAgent(gk).generate_claim(1, []).claim_text == "recovered"
 
 
+@patch(_SLP)
+def test_agent_retries_on_truncated_json_and_succeeds(mock_sleep) -> None:
+    gk, client = _make()
+    truncated = _resp('{"claim_text":"long arg","addressed_claim_ids":["b0\'')
+    ok = _resp('{"claim_text":"recovered after truncation","addressed_claim_ids":[]}')
+    client.messages.create.side_effect = [truncated, ok]
+    result = ProAgent(gk).generate_claim(1, [])
+    assert result.claim_text == "recovered after truncation"
+    assert client.messages.create.call_count == 2
+
+
+@patch(_SLP)
+def test_agent_raises_after_all_json_retries_exhausted(mock_sleep) -> None:
+    gk, client = _make()
+    client.messages.create.return_value = _resp('{"truncated":')
+    with pytest.raises(ValueError):
+        ProAgent(gk).generate_claim(1, [])
+
+
 def test_watchdog_not_tripped_initially() -> None:
     assert not Watchdog(failure_threshold=3).tripped
 
