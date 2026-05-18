@@ -4,10 +4,13 @@ from .gatekeeper import (
     GatekeeperRateLimitError,
     GatekeeperTimeoutError,
 )
+from .watchdog import Watchdog, WatchdogTrippedError
 
 __all__ = [
     "ApiGatekeeper",
     "GatekeeperError",
     "GatekeeperRateLimitError",
     "GatekeeperTimeoutError",
+    "Watchdog",
+    "WatchdogTrippedError",
 ]
