@@ -188,6 +188,28 @@ After a benchmark run, the reporter writes a structured JSON file to the project
 
 ---
 
+## Benchmark Analysis & Results
+
+A benchmark of 5 full debates (10 rounds each) was run against the thesis configuration. The CON agent won 4 out of 5 debates, demonstrating a consistent structural advantage when arguing against AI replacing software engineers under the system's deterministic verdict rules.
+
+### Winner Distribution
+
+![Winner Distribution](assets/winner_distribution.png)
+
+### Tokens per Run
+
+![Tokens per Run](assets/tokens_per_run.png)
+
+### Cache Efficiency
+
+![Cache Efficiency](assets/cache_efficiency.png)
+
+### Latency per Round
+
+![Latency per Round](assets/latency_per_round.png)
+
+---
+
 ## Hyperparameters
 
 | Parameter | Default | Description |
