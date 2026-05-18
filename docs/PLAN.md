@@ -368,6 +368,27 @@ benchmarks/reporter ←── engine/pipeline
 
 ---
 
+## CI/CD: GitHub Actions Automation
+
+GitHub Actions enforces the project's quality gates on every `push` and
+`pull_request` to `master` / `main`. The workflow mirrors local development
+exactly — `uv` is the single task runner throughout:
+
+```
+ubuntu-latest
+  ├── actions/checkout@v4
+  ├── astral-sh/setup-uv@v5       (install uv)
+  ├── uv sync                     (install all deps from uv.lock)
+  ├── uv run ruff check .         (zero-error lint gate)
+  └── uv run pytest               (all tests must pass)
+```
+
+No direct `pip` or `python -m` calls. The workflow file lives at
+`.github/workflows/ci.yml` and is the canonical source for what "passing"
+means in this project.
+
+---
+
 ## Key Design Decisions
 
 | Decision | Rationale |

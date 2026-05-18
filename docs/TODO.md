@@ -298,6 +298,43 @@ uv run pytest --cov=src --cov-report=term-missing | tail -5
 
 ---
 
+## Phase 11: CI/CD — GitHub Actions Pipeline
+
+**Goal**: Every `push` and `pull_request` to `master` / `main` automatically
+lints and tests the codebase via GitHub Actions. `uv` is the single
+package and task runner — no direct `pip` or `python -m` calls.
+
+**Reference**: `.github/workflows/ci.yml`
+
+### 11.1 — Documentation (Phase 1)
+
+- [x] Update `docs/TODO.md` with Phase 11 tasks (this section)
+- [x] Update `docs/PLAN.md` with CI/CD automation summary
+
+### 11.2 — Workflow File (Phase 2 — pending approval)
+
+- [x] Create `.github/workflows/` directory
+- [x] Write `.github/workflows/ci.yml` with:
+  - Trigger: `push` and `pull_request` to `master` and `main`
+  - Runner: `ubuntu-latest`
+  - Steps: checkout → install `uv` → `uv sync` → `uv run ruff check .` → `uv run pytest`
+
+### Phase 11 Gate
+
+```bash
+# Local pre-push gate (mirrors CI exactly)
+uv run ruff check .      # must exit 0
+uv run pytest            # all tests green
+
+# Verify workflow file is valid YAML
+python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))" && echo "PASS"
+
+# Confirm trigger branches
+grep -A2 "branches:" .github/workflows/ci.yml
+```
+
+---
+
 ## Hard Constraints (never skip)
 
 | Check | Command |
