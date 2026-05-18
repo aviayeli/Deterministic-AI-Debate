@@ -1,3 +1,5 @@
+from typing import Any
+
 from ..config import settings
 from ..engine.ledger import LedgerManager
 from ..gatekeeper import ApiGatekeeper
@@ -23,9 +25,12 @@ _SUFFIX = (
 
 
 class ConAgent(BaseAgent):
-    def __init__(self, gatekeeper: ApiGatekeeper, topic: str | None = None) -> None:
+    def __init__(
+        self, gatekeeper: ApiGatekeeper, topic: str | None = None, search_tool: Any = None
+    ) -> None:
         super().__init__()
         self._gatekeeper = gatekeeper
+        self._search_tool = search_tool
         self._system = (
             f"You are a CON debater. Position: {topic} — DISAGREE.{_SUFFIX}"
             if topic else _SYSTEM
@@ -37,6 +42,8 @@ class ConAgent(BaseAgent):
         context = LedgerManager(opponent_ledger).serialize_for_llm(
             window=settings.LEDGER_WINDOW
         )
+        facts = self._search_facts("AI replacing software engineers limitations evidence")
+        search_ctx = f" Background facts: {facts}" if facts else ""
         msg, data = self._call_json(
             self._gatekeeper,
             model=settings.LLM_MODEL,
@@ -46,7 +53,7 @@ class ConAgent(BaseAgent):
             messages=[
                 {
                     "role": "user",
-                    "content": f"Round {round_number}. Opponent claims: {context}",
+                    "content": f"Round {round_number}. Opponent claims: {context}{search_ctx}",
                 }
             ],
         )

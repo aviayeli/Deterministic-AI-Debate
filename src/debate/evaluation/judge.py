@@ -4,6 +4,7 @@ from typing import Any
 
 from ..schemas.round import LedgerEntry, RoundSchema
 from ..schemas.verdict import VerdictSchema
+from .discourse import DiscourseChecker
 
 
 def _mean(values: list[float]) -> float:
@@ -13,6 +14,12 @@ def _mean(values: list[float]) -> float:
 def _mean_ev_quality(ledger: list[LedgerEntry]) -> float:
     scores = [ev.quality_score for e in ledger for ev in e.claim.evidence]
     return _mean(scores) if scores else 0.5
+
+
+def _discourse_penalty(agent: Any, checker: DiscourseChecker) -> float:
+    """Return the max single-claim penalty found across the agent's ledger."""
+    claims = [e.claim.claim_text for e in getattr(agent, "_ledger", [])]
+    return max((checker.penalty(c) for c in claims), default=0.0)
 
 
 def _v1_distance(agent: Any) -> float:
@@ -33,8 +40,11 @@ class Judge:
         con_agent: Any,
         debate_id: str = "",
     ) -> VerdictSchema:
-        pro_resp = _mean([r.responsiveness_score_pro for r in rounds])
-        con_resp = _mean([r.responsiveness_score_con for r in rounds])
+        checker = DiscourseChecker()
+        pro_penalty = _discourse_penalty(pro_agent, checker)
+        con_penalty = _discourse_penalty(con_agent, checker)
+        pro_resp = max(0.0, _mean([r.responsiveness_score_pro for r in rounds]) - pro_penalty)
+        con_resp = max(0.0, _mean([r.responsiveness_score_con for r in rounds]) - con_penalty)
         ev_pro = _mean_ev_quality(getattr(pro_agent, "_ledger", []))
         ev_con = _mean_ev_quality(getattr(con_agent, "_ledger", []))
         v1_pro = _v1_distance(pro_agent)
@@ -54,7 +64,10 @@ class Judge:
             v1_distance_con=v1_con,
             responsiveness_pro=pro_resp,
             responsiveness_con=con_resp,
-            reasoning=f"{winner} won with higher composite score.",
+            reasoning=(
+                f"{winner} won. Civility policy applied (see DISCOURSE_POLICY). "
+                f"Discourse penalties — PRO: {pro_penalty:.2f}, CON: {con_penalty:.2f}."
+            ),
         )
 
     def _resolve(

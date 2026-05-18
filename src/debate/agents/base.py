@@ -17,6 +17,9 @@ class BaseAgent(ABC):
         self._ledger: list[LedgerEntry] = []
         self._tokens: int = 0
         self._cache_hits: int = 0
+        self._search_tool: Any = None
+        self._search_context: str = ""
+        self._search_fetched: bool = False
 
     def set_v1_embedding(self, emb: list[float]) -> None:
         if self.v1_embedding is not None:
@@ -56,6 +59,14 @@ class BaseAgent(ABC):
         raise ValueError(
             f"JSON parse failed after {max_retries} attempts"
         ) from last_exc
+
+    def _search_facts(self, query: str) -> str:
+        """Fetch once per debate and cache; returns '' if no tool is attached."""
+        if not self._search_fetched:
+            self._search_fetched = True
+            if self._search_tool is not None:
+                self._search_context = self._search_tool.search(query)
+        return self._search_context
 
     @abstractmethod
     def generate_claim(
