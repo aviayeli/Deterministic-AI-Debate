@@ -247,3 +247,115 @@ This system was designed against all eight ISO/IEC 25010 quality characteristics
 | Zero linter errors | `uv run ruff check .` |
 | No file >= 150 lines | `find src tests main.py -name "*.py" \| xargs wc -l` |
 | `main.py` <= 20 lines | `wc -l main.py` |
+
+---
+
+## Configuration Guide
+
+All runtime secrets and tuning parameters are managed via a `.env` file in the project root. A fully annotated template is provided at `.env-example` — copy it and fill in your credentials before running the system.
+
+```bash
+cp .env-example .env
+# Then open .env and set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The `.env` file is listed in `.gitignore` and is **never committed**. Secrets are loaded at startup by `pydantic-settings` (`src/debate/config.py`), which validates every field against its expected type and raises a clear error on misconfiguration. See the [Installation](#installation) section for the full list of supported keys and their defaults.
+
+---
+
+## Contribution Guidelines
+
+Contributions are welcome. Please read the following constraints before opening a pull request — the CI gate enforces all of them automatically.
+
+### Dependency Management
+
+This project uses [`uv`](https://docs.astral.sh/uv/) exclusively. Do **not** use `pip install` or modify `requirements.txt` directly.
+
+```bash
+uv add <package>          # add a runtime dependency
+uv add --dev <package>    # add a development dependency
+uv sync                   # reproduce the locked environment
+```
+
+### Code Style
+
+| Rule | Enforcement |
+|---|---|
+| Zero linter errors | `uv run ruff check .` must exit `0` before every commit |
+| Import sorting | Ruff `I001` — run `uv run ruff check . --fix` to auto-correct |
+| Max lines per `.py` file | **150 lines** — hard limit, no exceptions |
+| Max lines for `main.py` | **20 lines** — entry point must remain a thin dispatcher |
+
+### Testing
+
+All pull requests must keep the full `pytest` suite green with zero failures and zero API calls:
+
+```bash
+uv run pytest -v
+```
+
+New features require corresponding tests. The test suite runs entirely offline — mock any external API call using `unittest.mock.patch`.
+
+### Commit Style
+
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+feat: add streaming support to DebateEngine
+fix: prevent V1 anchor overwrite on retry
+style: fix Ruff I001 import sorting in test_forecaster.py
+docs: add contribution guidelines to README
+```
+
+---
+
+## System in Action
+
+![Debate Terminal Execution](assets/terminal_screenshot.png)
+
+---
+
+## License & Credits
+
+### License
+
+This project is released under the **MIT License**.
+
+```
+MIT License
+
+Copyright (c) 2026 Avi Ayeli
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Open-Source Acknowledgements
+
+This system is built on the shoulders of the following open-source projects:
+
+| Tool | Purpose |
+|---|---|
+| [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) | LLM inference for PRO and CON agents |
+| [LangChain](https://github.com/langchain-ai/langchain) | Embedding pipeline and vector utilities |
+| [sentence-transformers](https://github.com/UKPLab/sentence-transformers) | `all-MiniLM-L6-v2` semantic embeddings |
+| [Pydantic](https://github.com/pydantic/pydantic) / [pydantic-settings](https://github.com/pydantic/pydantic-settings) | Schema validation and `.env` config loading |
+| [pytest](https://github.com/pytest-dev/pytest) | Test framework (133-test offline suite) |
+| [Ruff](https://github.com/astral-sh/ruff) | Linter and import sorter |
+| [uv](https://github.com/astral-sh/uv) | Dependency management and virtual environment |
+| [Rich](https://github.com/Textualize/rich) | Terminal progress bars and formatted output |
