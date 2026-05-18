@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..benchmarks.reporter import BenchmarkReporter
+from ..config import settings
+from .forecaster import confirm_benchmark
 from .menu import display_topics, parse_choice
 
 if TYPE_CHECKING:
@@ -42,6 +44,9 @@ def handle_run_benchmark(sdk: DebateSDK, n: int | None = None) -> list[DebateRes
             n = int(raw) if raw else 5
         except (ValueError, EOFError):
             n = 5
+    if not confirm_benchmark(n_runs=n, max_rounds=settings.MAX_ROUNDS):
+        print("  Benchmark aborted.")
+        return []
     print(f"  Running benchmark: {n} debates ...")
     results = sdk.run_benchmark(n=n)
     BenchmarkReporter.export(results, _OUTPUT_JSON)

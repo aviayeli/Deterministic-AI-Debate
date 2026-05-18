@@ -80,7 +80,10 @@ def test_handle_run_single_calls_sdk(capsys) -> None:
 def test_handle_run_benchmark_calls_sdk_with_n() -> None:
     sdk = _sdk()
     sdk.run_benchmark.return_value = [MagicMock()]
-    with patch(f"{_HANDLERS}.BenchmarkReporter.export"):
+    with (
+        patch(f"{_HANDLERS}.confirm_benchmark", return_value=True),
+        patch(f"{_HANDLERS}.BenchmarkReporter.export"),
+    ):
         handle_run_benchmark(sdk, n=2)
     sdk.run_benchmark.assert_called_once_with(n=2)
 
