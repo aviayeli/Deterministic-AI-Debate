@@ -10,12 +10,14 @@ _log = get_logger("pro_agent")
 
 _SYSTEM = (
     "You are a PRO debater arguing that AI WILL replace software engineers. "
+    "Keep your arguments under 200 words to ensure complete JSON output. "
     "You MUST respond with ONLY a raw JSON object — no markdown, no preamble, no explanation. "
     "Output nothing except this exact structure: "
     '{"claim_text": "<your argument>", "addressed_claim_ids": ["<id>", ...]}'
 )
 _SUFFIX = (
-    " You MUST respond with ONLY a raw JSON object — no markdown, no preamble. "
+    " Keep your arguments under 200 words to ensure complete JSON output. "
+    "You MUST respond with ONLY a raw JSON object — no markdown, no preamble. "
     'Output: {"claim_text": "<your argument>", "addressed_claim_ids": ["<id>", ...]}'
 )
 
@@ -38,7 +40,7 @@ class ProAgent(BaseAgent):
         msg, data = self._call_json(
             self._gatekeeper,
             model=settings.LLM_MODEL,
-            max_tokens=4096,
+            max_tokens=8192,
             temperature=0,
             system=self._system,
             messages=[
