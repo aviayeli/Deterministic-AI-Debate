@@ -335,6 +335,87 @@ grep -A2 "branches:" .github/workflows/ci.yml
 
 ---
 
+## Phase 12: Cost Forecasting — CLI Pre-Benchmark Confirmation
+
+**Goal**: Before every multithreaded benchmark run the CLI estimates token
+consumption and dollar cost, prints a one-line summary, and asks the user for
+explicit confirmation. Declining aborts gracefully and returns to the main menu
+without raising an exception.
+
+**Reference**: Software Excellence Guidelines §11.2 (Cost Transparency) and
+§20.7 (Graceful Degradation in Interactive Flows)
+
+**Rate used for forecast**: $0.01 per 1 000 tokens (conservative average for
+Claude / Gemini API tiers). Formula:
+`n_runs × max_rounds × 2 agents × 500 avg_tokens/call`.
+
+### 12.1 — Documentation (Phase 1) ✅
+
+- [x] Update `docs/TODO.md` with Phase 12 tasks (this section)
+
+### 12.2 — TDD: Tests First (Phase 2) ✅
+
+New file: `tests/test_forecaster.py`
+
+**`estimate_tokens` unit tests**
+- [x] `test_estimate_tokens_scales_with_runs_and_rounds` — n × rounds × 2 × 500
+- [x] `test_estimate_tokens_zero_runs_is_zero`
+- [x] `test_estimate_tokens_single_run_single_round`
+
+**`estimate_cost` unit tests**
+- [x] `test_estimate_cost_matches_token_rate` — cost ≈ tokens × $0.01 / 1 000
+- [x] `test_estimate_cost_zero_runs_is_zero`
+- [x] `test_estimate_cost_increases_with_scale`
+
+**`confirm_benchmark` unit tests**
+- [x] `test_confirm_benchmark_returns_true_on_y`
+- [x] `test_confirm_benchmark_returns_true_on_uppercase_Y`
+- [x] `test_confirm_benchmark_returns_false_on_n`
+- [x] `test_confirm_benchmark_returns_false_on_uppercase_N`
+- [x] `test_confirm_benchmark_returns_false_on_empty_enter` — default is N
+- [x] `test_confirm_benchmark_returns_false_on_eoferror` — non-interactive safety
+- [x] `test_confirm_benchmark_displays_cost_estimate` — output contains `$`
+- [x] `test_confirm_benchmark_displays_token_count` — output contains `token`
+
+**`handle_run_benchmark` integration tests**
+- [x] `test_handle_run_benchmark_aborts_on_rejection` — sdk.run_benchmark not called; returns `[]`
+- [x] `test_handle_run_benchmark_proceeds_on_confirmation` — sdk.run_benchmark called; results returned
+
+### 12.3 — Implementation (Phase 3 — pending approval)
+
+- [ ] `src/debate/cli/forecaster.py` — `estimate_tokens()`, `estimate_cost()`,
+  `confirm_benchmark()` (≤ 40 lines)
+- [ ] `src/debate/cli/handlers.py` — import `confirm_benchmark`; add forecast
+  + confirmation gate inside `handle_run_benchmark()`; return `[]` on rejection
+- [ ] `src/debate/cli/__init__.py` — no changes required
+
+### Phase 12 Gate
+
+```bash
+# All tests green (including new test_forecaster.py)
+uv run pytest -v
+
+# Zero linter errors
+uv run ruff check .
+
+# Coverage stays above 85%
+uv run pytest --cov=src --cov-report=term-missing | tail -5
+
+# No file exceeds 150 lines
+find src tests -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS"}'
+
+# Manual smoke-test (reject path)
+echo "n" | uv run python main.py --interactive
+# Expected: benchmark aborted, no API calls made
+
+# Manual smoke-test (confirm path)
+echo -e "3\n1\ny" | uv run python main.py --interactive
+# Expected: 1-run benchmark proceeds
+```
+
+---
+
 ## Hard Constraints (never skip)
 
 | Check | Command |
