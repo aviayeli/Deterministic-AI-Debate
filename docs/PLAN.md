@@ -368,6 +368,98 @@ benchmarks/reporter ←── engine/pipeline
 
 ---
 
+## C4 Model Architecture
+
+The following diagrams use the [C4 model](https://c4model.com/) to describe
+the system at three levels of abstraction, rendered via Mermaid.
+
+### Level 1 — System Context
+
+Who uses the system and which external systems does it depend on.
+
+```mermaid
+C4Context
+    title System Context — Deterministic AI Debate System
+
+    Person(researcher, "Researcher / Developer", "Runs debates, inspects results, registers plugin hooks via the SDK or CLI")
+
+    System(debate_system, "Deterministic AI Debate System", "Orchestrates structured multi-agent debates with deterministic scoring, reproducible verdicts, and a plugin event bus")
+
+    System_Ext(anthropic_api, "Anthropic Claude API", "Provides LLM completions for PRO and CON claim generation (claude-sonnet-4-6, temperature=0). Rate-limited via ApiGatekeeper.")
+    System_Ext(hf_model, "HuggingFace sentence-transformers", "Supplies the local all-MiniLM-L6-v2 model for deterministic text embeddings. No network call at inference time.")
+
+    Rel(researcher, debate_system, "Runs benchmarks, exports results, registers hooks", "CLI / Python SDK")
+    Rel(debate_system, anthropic_api, "Generates agent claims via rate-limited API calls", "HTTPS / Anthropic SDK")
+    Rel(debate_system, hf_model, "Embeds claim text for V1 anchoring and semantic drift analysis", "Local inference")
+```
+
+---
+
+### Level 2 — Container Diagram
+
+The logical containers (deployable/runnable units) that make up the system.
+
+```mermaid
+C4Container
+    title Container Diagram — Deterministic AI Debate System
+
+    Person(researcher, "Researcher / Developer")
+
+    Container_Boundary(system, "Deterministic AI Debate System") {
+        Container(cli_sdk, "CLI / SDK Layer", "Python", "Entry points: main.py, DebateSDK facade, interactive terminal menu (menu.py, handlers.py, entry.py)")
+        Container(engine, "Debate Engine", "Python", "pipeline.py drives debate rounds and parallel benchmarks; ledger.py manages windowed context; embeddings.py is the local vector service")
+        Container(agents, "Agent Layer", "Python + Anthropic SDK", "ProAgent and ConAgent wrap LLM calls. BaseAgent enforces V1 embedding immutability and the windowed ledger contract.")
+        Container(evaluation, "Evaluation Layer", "Python", "Judge applies the 4-level deterministic tiebreaker. ResponsivenessCalculator and SemanticDriftEvaluator score each round.")
+        Container(gatekeeper, "API Gatekeeper", "Python", "Token-bucket rate limiter, configurable retry-with-backoff, and Watchdog circuit breaker. All Anthropic calls are routed here.")
+        Container(events, "Event Bus", "Python", "Thread-safe pub/sub bus with 6 typed lifecycle events. Plugins register handlers via DebateSDK.on() with zero coupling to core logic.")
+        Container(config_store, "Configuration Store", "JSON + .env", ".env holds hyperparameters; config/ holds rate_limits.json, topics.json, logging_config.json, visualization_config.json")
+    }
+
+    System_Ext(anthropic_api, "Anthropic Claude API")
+    System_Ext(hf_model, "HuggingFace sentence-transformers")
+
+    Rel(researcher, cli_sdk, "Invokes", "CLI args or Python import")
+    Rel(cli_sdk, engine, "Delegates debate runs and benchmark orchestration to")
+    Rel(engine, agents, "Calls generate_claim(round, windowed_ledger) per agent per round")
+    Rel(agents, gatekeeper, "Routes every Anthropic API call through")
+    Rel(gatekeeper, anthropic_api, "Forwards LLM requests", "HTTPS")
+    Rel(engine, hf_model, "Loads embedding model via EmbeddingService singleton")
+    Rel(engine, evaluation, "Submits rounds for scoring; receives VerdictSchema")
+    Rel(engine, events, "Emits 6 typed lifecycle events per debate")
+    Rel(cli_sdk, events, "Registers external plugin handlers via SDK.on()")
+    Rel(gatekeeper, config_store, "Loads rate limits and retry policy from rate_limits.json")
+```
+
+---
+
+### Level 3 — Component Diagram: Debate Engine
+
+The internal components of the `engine/` container.
+
+```mermaid
+C4Component
+    title Component Diagram — Debate Engine (src/debate/engine/)
+
+    Container_Boundary(engine, "Debate Engine") {
+        Component(pipeline, "pipeline.py", "Orchestrator", "run_debate() drives the per-round loop. run_benchmarks() parallelises N runs via ThreadPoolExecutor, streaming results with as_completed().")
+        Component(ledger, "ledger.py", "Context Manager", "LedgerManager serialises the last LEDGER_WINDOW opponent claims to compact JSON for LLM prompts. Maintains full history for the Judge.")
+        Component(embeddings, "embeddings.py", "Vector Service", "EmbeddingService singleton loads all-MiniLM-L6-v2 once at startup. Provides embed(), cosine_distance(), cosine_similarity(), and weighted_centroid().")
+    }
+
+    Container(agents, "Agent Layer", "Python")
+    Container(evaluation, "Evaluation Layer", "Python")
+    Container(events, "Event Bus", "Python")
+
+    Rel(pipeline, agents, "Calls generate_claim(round_number, windowed_ledger) for PRO and CON each round")
+    Rel(pipeline, ledger, "Serialises windowed opponent history before each generate_claim() call")
+    Rel(pipeline, embeddings, "Embeds each claim; anchors V1 embedding on round 1 via BaseAgent.set_v1_embedding()")
+    Rel(pipeline, evaluation, "Calls judge.evaluate_debate(rounds, pro_agent, con_agent) after final round")
+    Rel(pipeline, events, "Emits DebateStartEvent, RoundStartEvent, AgentReplyEvent, RoundEndEvent, BeforeEvaluationEvent, DebateEndEvent")
+    Rel(evaluation, embeddings, "SemanticDriftEvaluator calls EmbeddingService for cosine ops and weighted centroid")
+```
+
+---
+
 ## CI/CD: GitHub Actions Automation
 
 GitHub Actions enforces the project's quality gates on every `push` and
@@ -401,3 +493,193 @@ means in this project.
 | `pipeline.py` only orchestrates | All logic is independently testable; `main.py` is a pure shim |
 | One module per concern | Files stay under 150 lines without forced truncation |
 | `pydantic-settings` for config | `.env` is the single source of truth; no hardcoded hyperparameters |
+
+---
+
+## Architectural Decision Records (ADRs)
+
+ADRs capture the significant design choices made in this project, the context
+that motivated them, and the trade-offs accepted. Each record is immutable once
+accepted; superseded ADRs are marked accordingly.
+
+---
+
+### ADR-001: ThreadPoolExecutor for Parallel Benchmark Orchestration
+
+| Field | Value |
+|---|---|
+| **Status** | Accepted |
+| **Date** | 2026-05-17 |
+| **Deciders** | System Architect |
+| **Affected modules** | `src/debate/engine/pipeline.py`, `src/debate/gatekeeper/config.py` |
+
+#### Context
+
+Benchmarks require running N independent debate sessions (default N = 5). Each
+session consists of multiple sequential Anthropic API calls — one per agent per
+round. These calls are strictly **I/O-bound**: the Python thread blocks while
+waiting for a network response, then resumes to parse a few hundred bytes of
+JSON. The CPU is idle for the vast majority of each call's duration.
+
+Two primary concurrency models were available:
+
+- `concurrent.futures.ThreadPoolExecutor` — OS threads with Python's GIL
+- `asyncio` — cooperative coroutines with a single-threaded event loop
+
+#### Decision
+
+Use `ThreadPoolExecutor` with a configurable `max_workers` value loaded from
+`config/rate_limits.json`. Each debate session runs in its own thread. Results
+are collected via `concurrent.futures.as_completed()` to enable streaming
+progress reporting.
+
+#### Rationale
+
+1. **GIL irrelevance for I/O-bound work.** Python's Global Interpreter Lock is
+   released during I/O operations (network reads/writes inside the Anthropic SDK).
+   Threads genuinely run concurrently while waiting for API responses. CPU-bound
+   parallelism (where the GIL matters) does not appear in this workload.
+
+2. **Zero refactoring cost.** The Anthropic SDK, `ApiGatekeeper`, `ProAgent`,
+   `ConAgent`, and `Judge` are all synchronous. `ThreadPoolExecutor` wraps them
+   without any API changes. Adopting `asyncio` would require propagating
+   `async/await` through every layer of the call stack.
+
+3. **Single concurrency model.** `ApiGatekeeper` already uses `threading.Lock`
+   for its token bucket. Introducing `asyncio` would create a second concurrency
+   model in the same process, requiring careful boundary management between the
+   sync and async worlds (e.g., `asyncio.run_in_executor` bridges).
+
+4. **`as_completed()` for progress streaming.** `concurrent.futures.as_completed()`
+   integrates naturally with `rich.progress`, yielding futures as they resolve so
+   the progress bar advances in real time.
+
+5. **`max_workers` is config-driven.** Thread count is read from
+   `rate_limits.json` at runtime, allowing operators to tune concurrency to match
+   their API rate limit tier without modifying any Python file.
+
+#### Consequences
+
+**Positive:**
+- Parallel benchmarks complete in ≈ 1/N of sequential time for I/O-bound sessions.
+- No `async/await` syntax in any module; the codebase stays readable for
+  researchers unfamiliar with asynchronous Python.
+- Thread safety is fully encapsulated inside `ApiGatekeeper`; agents and the
+  pipeline do not reason about concurrency directly.
+
+**Negative / Trade-offs:**
+- Each thread holds an OS stack (~1 MB by default); N = 10+ sessions would
+  consume meaningful memory. In practice, N ≤ 5–10 is the expected use case.
+- The GIL still serialises pure-Python CPU work (JSON parsing, Pydantic
+  validation) between threads, causing minor serialisation overhead that would
+  not exist with `asyncio`.
+- Thread pool exhaustion is not self-healing; if `max_workers` is set too high
+  for the API tier, the `ApiGatekeeper` rate limiter (not the pool) becomes the
+  bottleneck.
+
+#### Alternatives Considered
+
+| Alternative | Reason Rejected |
+|---|---|
+| `asyncio` + `anthropic.AsyncAnthropic` | Requires full async refactor of agents, gatekeeper, and pipeline. No runtime benefit for this I/O-bound workload pattern. |
+| `multiprocessing.Pool` | Process-per-debate has prohibitive memory overhead (each process reloads the sentence-transformer model, ~100 MB). |
+| Sequential execution (no parallelism) | Unacceptable latency: 5 × 10-round debates at ~2 s/round = ~100 s sequentially vs. ~20 s in parallel. |
+
+---
+
+### ADR-002: EventBus / Hooks Architecture for the Plugin System
+
+| Field | Value |
+|---|---|
+| **Status** | Accepted |
+| **Date** | 2026-05-17 |
+| **Deciders** | System Architect |
+| **Affected modules** | `src/debate/events/bus.py`, `src/debate/events/types.py`, `src/debate/engine/pipeline.py`, `src/debate/sdk.py` |
+
+#### Context
+
+Research users need to observe debate lifecycle events (session start, each
+round's claims, the final verdict, etc.) to build custom logging, real-time
+dashboards, data exporters, or evaluation plugins. The core orchestration logic
+in `pipeline.py` must remain unmodified when new observers are added —
+modifying `pipeline.py` per consumer would violate the Open-Closed Principle
+and make the codebase fragile under academic iteration.
+
+#### Decision
+
+Implement a lightweight, thread-safe `EventBus` with six explicitly typed
+lifecycle events. External code registers `Callable` handlers via
+`DebateSDK.on(event_name, handler)`. `pipeline.run_debate()` emits events at
+fixed hook points; it has no knowledge of registered consumers.
+
+The six lifecycle events and their emission points are:
+
+| Event | Emitted when |
+|---|---|
+| `DebateStartEvent` | Before round 1 begins |
+| `RoundStartEvent` | At the start of each round |
+| `AgentReplyEvent` | After each agent generates a claim |
+| `RoundEndEvent` | After both agents have replied and round metrics are computed |
+| `BeforeEvaluationEvent` | After the final round, before the Judge runs |
+| `DebateEndEvent` | After the `VerdictSchema` is produced |
+
+#### Rationale
+
+1. **Open-Closed Principle.** `pipeline.py` is open for extension (new handlers
+   can observe any event) and closed for modification (no pipeline code changes
+   when a plugin is added or removed). This is the central architectural
+   invariant of the plugin system.
+
+2. **Zero coupling.** Handlers receive typed dataclasses (`RoundEndEvent`,
+   `DebateEndEvent`, etc.) that carry only public data. Plugins import from
+   `debate.events` — never from internal engine modules. The dependency arrow
+   points inward only.
+
+3. **Thread safety by design.** `EventBus.on()` acquires a `threading.Lock`
+   during handler registration. `EventBus.emit()` takes a snapshot of the
+   handler list before iterating, so concurrent `run_debate()` calls cannot
+   observe a partially updated handler list.
+
+4. **Explicit contract surface.** The six named events are the documented,
+   versioned plugin API. Each event dataclass is a `@dataclass` with typed
+   fields — consumers get IDE autocompletion and static analysis support.
+   The total surface is small enough to be understood in a single reading.
+
+5. **Proportionality.** The implementation fits within the 150-line/file
+   constraint (`bus.py` < 20 lines, `types.py` < 50 lines). A heavy plugin
+   framework (e.g., `pluggy`) would add an external dependency for a
+   problem this bounded in scope.
+
+6. **Fail-loud semantics.** Handler exceptions propagate out of `emit()` by
+   design. Silent swallowing of plugin errors would mask research bugs; loudness
+   is the correct default for an academic system where correctness is paramount.
+
+#### Consequences
+
+**Positive:**
+- Adding a plugin requires zero changes to any core module — only a call to
+  `sdk.on(event, handler)` before `run_single()` or `run_benchmark()`.
+- Typed event dataclasses make plugin code self-documenting and refactor-safe.
+- The bus is reusable across both single-run and benchmark modes with no
+  additional wiring.
+
+**Negative / Trade-offs:**
+- Handler registration order determines invocation order within an event;
+  there is no priority mechanism. This is acceptable because handlers are
+  expected to be independent observers, not ordered transformers.
+- No event versioning scheme is defined. If a typed event dataclass gains or
+  loses a field in a future release, all registered handlers that reference
+  that field must be updated. A versioned schema registry would mitigate this
+  at the cost of significant added complexity.
+- A handler that raises an unhandled exception aborts subsequent handlers for
+  that event emission. Plugin authors are responsible for their own error
+  boundaries (e.g., wrapping handler bodies in `try/except`).
+
+#### Alternatives Considered
+
+| Alternative | Reason Rejected |
+|---|---|
+| `pluggy` (pytest's plugin framework) | Adds an external dependency; requires `hookspec` marker decorators; designed for CLI tool plugins, not for in-process research instrumentation. |
+| Abstract base class / subclass hooks | Every new hook point requires modifying `pipeline.py` (adding an abstract method call), directly violating OCP. Inheritance also prevents multiple independent plugins. |
+| Direct callback injection into `run_debate()` | Passing callbacks as function parameters couples the pipeline signature to every possible observer, producing an unmanageable argument list as the plugin surface grows. |
+| `multiprocessing` message queue | Introduces IPC serialisation overhead and prevents handlers from sharing in-process state with the main debate run — unnecessary complexity for an in-process instrumentation use case. |
