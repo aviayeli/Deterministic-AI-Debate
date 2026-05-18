@@ -88,17 +88,21 @@ main.py                  # Thin CLI — argparse + run_benchmarks()
 
 ## Installation
 
-Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+.
+**Prerequisites:** Python 3.12+ and [`uv`](https://docs.astral.sh/uv/) must be installed on your system.
 
 ```bash
+# 1. Clone the repository
 git clone <repo-url>
 cd Deterministic-AI-Debate
 
-# Install all dependencies (creates .venv automatically)
+# 2. Install all dependencies (creates .venv automatically)
 uv sync
+
+# 3. Copy the environment template and fill in your credentials
+cp .env-example .env
 ```
 
-Create a `.env` file in the project root:
+Open `.env` and set `ANTHROPIC_API_KEY` at minimum. The full reference of supported keys and their defaults is shown below:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
@@ -247,6 +251,25 @@ This system was designed against all eight ISO/IEC 25010 quality characteristics
 | Zero linter errors | `uv run ruff check .` |
 | No file >= 150 lines | `find src tests main.py -name "*.py" \| xargs wc -l` |
 | `main.py` <= 20 lines | `wc -l main.py` |
+
+---
+
+## Usage
+
+Start the system with:
+
+```bash
+uv run python main.py
+```
+
+This launches an interactive numbered CLI menu — no flags required. The menu presents the available actions (single debate, full benchmark suite, help) and prompts you for any required input. Use the number keys to navigate and follow the on-screen prompts.
+
+For non-interactive or scripted runs you can pass flags directly (see [Running the Benchmark](#running-the-benchmark) for the full flag reference):
+
+```bash
+# Quick smoke test — 1 debate, 3 rounds
+uv run python main.py --runs 1 --rounds 3
+```
 
 ---
 
