@@ -1,6 +1,6 @@
 [project]
 name = "deterministic-ai-debate"
-version = "0.2.0"
+version = "1.0.0"
 description = "Deterministic multi-agent AI debate system with hooks, plugin architecture, and ISO/IEC 25010 compliance"
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,7 +16,7 @@ keywords = [
     "anthropic",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",

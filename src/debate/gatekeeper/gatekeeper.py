@@ -5,7 +5,10 @@ from typing import Any
 
 import anthropic
 
+from ..shared.logger import get_logger
 from .config import GatekeeperConfig
+
+_logger = get_logger("gatekeeper")
 
 
 class GatekeeperError(Exception):
@@ -67,9 +70,13 @@ class ApiGatekeeper:
                 last_exc = exc
                 if attempt < self._config.max_retries:
                     wait = self._config.backoff_factor * (2**attempt) + random.uniform(0, 0.5)
+                    _logger.warning("Retry %d/%d: %s -- waiting %.2fs", attempt + 1, self._config.max_retries, type(exc).__name__, wait)
                     time.sleep(wait)
         if isinstance(last_exc, anthropic.APITimeoutError):
+            _logger.error("All retries exhausted (timeout): %s", last_exc)
             raise GatekeeperTimeoutError(str(last_exc)) from last_exc
         if isinstance(last_exc, anthropic.RateLimitError):
+            _logger.error("All retries exhausted (rate limit): %s", last_exc)
             raise GatekeeperRateLimitError(str(last_exc)) from last_exc
+        _logger.error("All retries exhausted: %s", last_exc)
         raise GatekeeperError(str(last_exc)) from last_exc

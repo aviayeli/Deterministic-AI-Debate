@@ -822,3 +822,73 @@ grep -rn "print(" src/ main.py && echo "FAIL: print() found" || echo "PASS: no p
 # No hardcoded logging values in Python
 grep -n "500\|\"logs/\"\|max_files\s*=\s*20" src/debate/logging/logger.py && echo "FAIL: hardcoded value" || echo "PASS: config-driven"
 ```
+
+---
+
+## Phase 13: Enterprise Logging & v1.0.0 Versioning
+
+**Goal**: Add a centralized `RotatingFileHandler`-based logger to `src/debate/shared/` and
+bump the package version to `1.0.0` for official release. Integrate the logger into
+`ApiGatekeeper` and `Watchdog` so all failure paths produce structured log output.
+
+**Reference**: `logging.handlers.RotatingFileHandler` (stdlib); `backupCount=20`;
+`maxBytes=50_000` (~500 lines × 100 bytes/line average).
+
+### 13.1 — Documentation (Phase 1) ✅
+
+- [x] Update `docs/TODO.md` with Phase 13 tasks (this section)
+
+### 13.2 — TDD: Tests First (Phase 2)
+
+New file: `tests/test_shared_logger.py`
+
+**Version tests**
+- [ ] `test_version_is_1_0_0` — `shared.version.__version__ == "1.0.0"`
+
+**`get_logger` unit tests**
+- [ ] `test_get_logger_returns_logger` — returns `logging.Logger` instance
+- [ ] `test_get_logger_creates_log_file` — file appears in `log_dir` after first `.info()`
+- [ ] `test_log_file_contains_message` — written message present in log file text
+- [ ] `test_handler_max_bytes_is_50000` — `RotatingFileHandler.maxBytes == 50_000`
+- [ ] `test_handler_backup_count_is_20` — `RotatingFileHandler.backupCount == 20`
+- [ ] `test_log_format_includes_level_and_name` — WARNING level and logger name in file
+- [ ] `test_get_logger_same_name_no_handler_duplication` — second call returns same object, one handler
+- [ ] `test_logger_exposes_standard_levels` — debug/info/warning/error callable without error
+- [ ] `test_log_dir_is_created_if_missing` — nested path auto-created on first call
+- [ ] `test_rotation_creates_backup_file` — 60 × 1 KB messages triggers rollover
+
+**Integration tests (Gatekeeper / Watchdog)**
+- [ ] `test_gatekeeper_has_shared_logger` — `gatekeeper._logger` is a `logging.Logger`
+- [ ] `test_watchdog_has_shared_logger` — `watchdog._logger` is a `logging.Logger`
+
+### 13.3 — Implementation (Phase 3 — pending approval)
+
+- [ ] `src/debate/shared/__init__.py` — re-exports `get_logger`, `__version__` with `__all__`
+- [ ] `src/debate/shared/logger.py` — `get_logger(name, log_dir=None) -> logging.Logger`;
+  `RotatingFileHandler(maxBytes=50_000, backupCount=20, delay=True)` (≤ 50 lines)
+- [ ] `src/debate/shared/version.py` — `__version__ = "1.0.0"` (≤ 5 lines)
+- [ ] `src/debate/gatekeeper/gatekeeper.py` — `_logger = get_logger("gatekeeper")`;
+  log each retry at WARNING, final failure at ERROR
+- [ ] `src/debate/gatekeeper/watchdog.py` — `_logger = get_logger("watchdog")`;
+  log circuit trip at WARNING, guarded call on open circuit at ERROR
+- [ ] `pyproject.toml` — `version = "0.2.0"` → `"1.0.0"`; classifier `Beta` → `Production/Stable`
+
+### Phase 13 Gate
+
+```bash
+# All tests green (including new test_shared_logger.py)
+uv run pytest -v
+
+# Zero linter errors
+uv run ruff check .
+
+# Coverage stays above 85%
+uv run pytest --cov=src --cov-report=term-missing | tail -5
+
+# No file exceeds 150 lines
+find src tests -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS"}'
+
+# Verify version
+python -c "from src.debate.shared.version import __version__; assert __version__ == '1.0.0'; print('PASS: v1.0.0')"
+```

@@ -5,6 +5,10 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+from ..shared.logger import get_logger
+
+_logger = get_logger("watchdog")
+
 
 class WatchdogTrippedError(Exception):
     """Raised when a guarded call is attempted on a tripped Watchdog."""
@@ -33,6 +37,7 @@ class Watchdog:
             self._failures += 1
             if self._failures >= self._threshold:
                 self._tripped = True
+                _logger.warning("Watchdog tripped: %d consecutive failures.", self._failures)
 
     def reset(self) -> None:
         with self._lock:
@@ -42,6 +47,7 @@ class Watchdog:
     def guard(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Call *fn*, record the outcome, and raise if the circuit is open."""
         if self.tripped:
+            _logger.error("Guard rejected: circuit open.")
             raise WatchdogTrippedError("Circuit breaker open — too many failures.")
         try:
             result = fn(*args, **kwargs)
