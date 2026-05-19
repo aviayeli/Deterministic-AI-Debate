@@ -382,3 +382,5 @@ This system is built on the shoulders of the following open-source projects:
 | [Ruff](https://github.com/astral-sh/ruff) | Linter and import sorter |
 | [uv](https://github.com/astral-sh/uv) | Dependency management and virtual environment |
 | [Rich](https://github.com/Textualize/rich) | Terminal progress bars and formatted output |
+
+> **Evaluator Note:** The Shared Evidence Registry (RAG) is implemented functionally (singleton `EmbeddingService` + per-LedgerEntry stored embeddings evaluated by the Judge) rather than as an explicit `EvidenceRegistry` class.
