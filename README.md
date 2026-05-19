@@ -332,7 +332,7 @@ docs: add contribution guidelines to README
 
 ---
 
-## System in Action
+## Screenshots
 
 ![Debate Terminal Execution](assets/terminal_screenshot.png)
 
