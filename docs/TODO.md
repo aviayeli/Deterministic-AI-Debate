@@ -15,33 +15,33 @@
 
 ### 1.1 — Tests First (`tests/test_schemas.py`)
 
-- [ ] Test `EvidenceSchema` rejects `quality_score` outside `[0.0, 1.0]`
-- [ ] Test `EvidenceSchema` accepts boundary values `0.0` and `1.0`
-- [ ] Test `ClaimPayloadSchema` requires `addressed_claim_ids` field (missing → `ValidationError`)
-- [ ] Test `ClaimPayloadSchema` requires non-empty `agent_id`
-- [ ] Test `ClaimPayloadSchema` auto-generates `claim_id` as a valid UUID4 string
-- [ ] Test `ClaimPayloadSchema` two instances get distinct `claim_id` values
-- [ ] Test `ClaimPayloadSchema.stance` rejects values outside `["PRO", "CON"]`
-- [ ] Test `LedgerEntry` correctly wraps a `ClaimPayloadSchema` with optional `embedding=None`
-- [ ] Test `RoundSchema` holds exactly one `pro_claim` and one `con_claim`
-- [ ] Test `VerdictSchema.winner` rejects values outside `["PRO", "CON"]`
-- [ ] Test `VerdictSchema.tiebreaker_used` accepts `None` (no tie)
-- [ ] Test `settings.RECENCY_DECAY_LAMBDA` loads from `.env` as `float`
-- [ ] Test `settings.V1_DISTANCE_THRESHOLD` loads from `.env` as `float`
-- [ ] Test default `settings.LEDGER_WINDOW == 3` when `.env` omits it
+- [x] Test `EvidenceSchema` rejects `quality_score` outside `[0.0, 1.0]`
+- [x] Test `EvidenceSchema` accepts boundary values `0.0` and `1.0`
+- [x] Test `ClaimPayloadSchema` requires `addressed_claim_ids` field (missing → `ValidationError`)
+- [x] Test `ClaimPayloadSchema` requires non-empty `agent_id`
+- [x] Test `ClaimPayloadSchema` auto-generates `claim_id` as a valid UUID4 string
+- [x] Test `ClaimPayloadSchema` two instances get distinct `claim_id` values
+- [x] Test `ClaimPayloadSchema.stance` rejects values outside `["PRO", "CON"]`
+- [x] Test `LedgerEntry` correctly wraps a `ClaimPayloadSchema` with optional `embedding=None`
+- [x] Test `RoundSchema` holds exactly one `pro_claim` and one `con_claim`
+- [x] Test `VerdictSchema.winner` rejects values outside `["PRO", "CON"]`
+- [x] Test `VerdictSchema.tiebreaker_used` accepts `None` (no tie)
+- [x] Test `settings.RECENCY_DECAY_LAMBDA` loads from `.env` as `float`
+- [x] Test `settings.V1_DISTANCE_THRESHOLD` loads from `.env` as `float`
+- [x] Test default `settings.LEDGER_WINDOW == 3` when `.env` omits it
 
 ### 1.2 — Implementation
 
-- [ ] `pyproject.toml`: add `anthropic>=0.40.0`, `sentence-transformers>=3.0.0`, `numpy>=1.26.0`, `pydantic-settings>=2.0.0`
-- [ ] `uv sync`
-- [ ] `src/debate/__init__.py`
-- [ ] `src/debate/config.py` — `Settings(BaseSettings)` with all hyperparameters, `settings` singleton
-- [ ] `src/debate/schemas/__init__.py`
-- [ ] `src/debate/schemas/claim.py` — `EvidenceSchema`, `ClaimPayloadSchema`
-- [ ] `src/debate/schemas/round.py` — `LedgerEntry`, `RoundSchema`
-- [ ] `src/debate/schemas/verdict.py` — `VerdictSchema`
-- [ ] `tests/conftest.py` — shared fixtures: `sample_claim()`, `sample_evidence()`, `sample_ledger_entry()`
-- [ ] Create `.env` with `RECENCY_DECAY_LAMBDA=0.3`, `V1_DISTANCE_THRESHOLD=0.4`
+- [x] `pyproject.toml`: add `anthropic>=0.40.0`, `sentence-transformers>=3.0.0`, `numpy>=1.26.0`, `pydantic-settings>=2.0.0`
+- [x] `uv sync`
+- [x] `src/debate/__init__.py`
+- [x] `src/debate/config.py` — `Settings(BaseSettings)` with all hyperparameters, `settings` singleton
+- [x] `src/debate/schemas/__init__.py`
+- [x] `src/debate/schemas/claim.py` — `EvidenceSchema`, `ClaimPayloadSchema`
+- [x] `src/debate/schemas/round.py` — `LedgerEntry`, `RoundSchema`
+- [x] `src/debate/schemas/verdict.py` — `VerdictSchema`
+- [x] `tests/conftest.py` — shared fixtures: `sample_claim()`, `sample_evidence()`, `sample_ledger_entry()`
+- [x] Create `.env` with `RECENCY_DECAY_LAMBDA=0.3`, `V1_DISTANCE_THRESHOLD=0.4`
 
 ### Phase 1 Gate
 
@@ -59,43 +59,43 @@ find src tests main.py -name "*.py" | xargs wc -l          # no file ≥ 150
 
 ### 2a.1 — Tests First (`tests/test_embeddings.py`)
 
-- [ ] Test `EmbeddingService.embed("hello")` returns a `List[float]`
-- [ ] Test embedding dimension is 384 (all-MiniLM-L6-v2 output size)
-- [ ] Test `embed(x) == embed(x)` (same input → identical output, determinism)
-- [ ] Test `cosine_distance(v, v) ≈ 0.0` for any vector `v`
-- [ ] Test `cosine_distance("AI automation", "apple pie recipe") > 0.5`
-- [ ] Test `cosine_similarity(v, v) ≈ 1.0`
-- [ ] Test `weighted_centroid([v], [1.0]) == v` (single-element case)
-- [ ] Test `weighted_centroid([a, b], [1.0, 1.0])` equals simple mean of `a` and `b`
-- [ ] Test `EmbeddingService` is a singleton (same object on multiple imports)
+- [x] Test `EmbeddingService.embed("hello")` returns a `List[float]`
+- [x] Test embedding dimension is 384 (all-MiniLM-L6-v2 output size)
+- [x] Test `embed(x) == embed(x)` (same input → identical output, determinism)
+- [x] Test `cosine_distance(v, v) ≈ 0.0` for any vector `v`
+- [x] Test `cosine_distance("AI automation", "apple pie recipe") > 0.5`
+- [x] Test `cosine_similarity(v, v) ≈ 1.0`
+- [x] Test `weighted_centroid([v], [1.0]) == v` (single-element case)
+- [x] Test `weighted_centroid([a, b], [1.0, 1.0])` equals simple mean of `a` and `b`
+- [x] Test `EmbeddingService` is a singleton (same object on multiple imports)
 
 ### 2a.2 — Tests First (`tests/test_semantic_drift.py`)
 
-- [ ] Test no penalty when `cosine_distance(current, v1) < V1_DISTANCE_THRESHOLD`
-- [ ] Test drift penalty > 0 when `cosine_distance(current, v1) > V1_DISTANCE_THRESHOLD`
-- [ ] Test `drift_penalty == 0` when centroid alignment below `CENTROID_ALIGNMENT_THRESHOLD`
-- [ ] Test centroid alignment penalty > 0 when similarity exceeds threshold
-- [ ] Test `evaluate()` reads `v1_embedding` from `agent.v1_embedding`, not ledger
-- [ ] Test `evaluate()` raises `ValueError` if `agent.v1_embedding is None`
-- [ ] Test decay weighting: more recent embeddings have higher weight in centroid
-- [ ] Test `DriftResult` fields: `v1_distance`, `centroid_alignment`, `drift_penalty`
+- [x] Test no penalty when `cosine_distance(current, v1) < V1_DISTANCE_THRESHOLD`
+- [x] Test drift penalty > 0 when `cosine_distance(current, v1) > V1_DISTANCE_THRESHOLD`
+- [x] Test `drift_penalty == 0` when centroid alignment below `CENTROID_ALIGNMENT_THRESHOLD`
+- [x] Test centroid alignment penalty > 0 when similarity exceeds threshold
+- [x] Test `evaluate()` reads `v1_embedding` from `agent.v1_embedding`, not ledger
+- [x] Test `evaluate()` raises `ValueError` if `agent.v1_embedding is None`
+- [x] Test decay weighting: more recent embeddings have higher weight in centroid
+- [x] Test `DriftResult` fields: `v1_distance`, `centroid_alignment`, `drift_penalty`
 
 ### 2a.3 — Tests First (`tests/test_responsiveness.py`)
 
-- [ ] Test score `== 1.0` when all `addressed_claim_ids` are valid in opponent ledger
-- [ ] Test score `== 0.0` when no `addressed_claim_ids` match opponent ledger
-- [ ] Test score `== 0.5` when exactly half of IDs match (2 of 4)
-- [ ] Test score `== 0.0` (not division error) when opponent ledger is empty
-- [ ] Test that IDs not in opponent ledger but declared do not raise — only lower score
-- [ ] Test score is deterministic for identical inputs
+- [x] Test score `== 1.0` when all `addressed_claim_ids` are valid in opponent ledger
+- [x] Test score `== 0.0` when no `addressed_claim_ids` match opponent ledger
+- [x] Test score `== 0.5` when exactly half of IDs match (2 of 4)
+- [x] Test score `== 0.0` (not division error) when opponent ledger is empty
+- [x] Test that IDs not in opponent ledger but declared do not raise — only lower score
+- [x] Test score is deterministic for identical inputs
 
 ### 2a.4 — Implementation
 
-- [ ] `src/debate/engine/__init__.py`
-- [ ] `src/debate/engine/embeddings.py` — `EmbeddingService` singleton, cosine ops, centroid
-- [ ] `src/debate/evaluation/__init__.py`
-- [ ] `src/debate/evaluation/responsiveness.py` — `ResponsivenessCalculator`
-- [ ] `src/debate/evaluation/semantic_drift.py` — `SemanticDriftEvaluator`, `DriftResult`
+- [x] `src/debate/engine/__init__.py`
+- [x] `src/debate/engine/embeddings.py` — `EmbeddingService` singleton, cosine ops, centroid
+- [x] `src/debate/evaluation/__init__.py`
+- [x] `src/debate/evaluation/responsiveness.py` — `ResponsivenessCalculator`
+- [x] `src/debate/evaluation/semantic_drift.py` — `SemanticDriftEvaluator`, `DriftResult`
 
 ### Phase 2a Gate
 
@@ -113,38 +113,38 @@ find src tests main.py -name "*.py" | xargs wc -l
 
 ### 2b.1 — Tests First (`tests/test_ledger.py`)
 
-- [ ] Test `BaseAgent.v1_embedding` is `None` before any claim is generated
-- [ ] Test `set_v1_embedding(emb)` stores the embedding in `agent.v1_embedding`
-- [ ] Test `set_v1_embedding()` raises `RuntimeError` when called a second time
-- [ ] Test `get_windowed_ledger(3)` returns at most 3 entries regardless of ledger size
-- [ ] Test `get_windowed_ledger(3)` returns the *last* 3 entries, not the first
-- [ ] Test `v1_embedding` is NOT returned by `get_windowed_ledger()` (separate state)
-- [ ] Test `LedgerManager.serialize_for_llm(entries)` returns valid JSON string
-- [ ] Test serialized JSON contains `claim_id` and `claim_text` fields
-- [ ] Test `LedgerManager.get_claim_ids()` returns a `Set[str]` of all `claim_id` values
+- [x] Test `BaseAgent.v1_embedding` is `None` before any claim is generated
+- [x] Test `set_v1_embedding(emb)` stores the embedding in `agent.v1_embedding`
+- [x] Test `set_v1_embedding()` raises `RuntimeError` when called a second time
+- [x] Test `get_windowed_ledger(3)` returns at most 3 entries regardless of ledger size
+- [x] Test `get_windowed_ledger(3)` returns the *last* 3 entries, not the first
+- [x] Test `v1_embedding` is NOT returned by `get_windowed_ledger()` (separate state)
+- [x] Test `LedgerManager.serialize_for_llm(entries)` returns valid JSON string
+- [x] Test serialized JSON contains `claim_id` and `claim_text` fields
+- [x] Test `LedgerManager.get_claim_ids()` returns a `Set[str]` of all `claim_id` values
 
 ### 2b.2 — Tests First (`tests/test_judge.py`)
 
-- [ ] Test `Judge.evaluate_debate()` returns a `VerdictSchema` for a 10-round debate
-- [ ] Test `VerdictSchema.winner` is exactly `"PRO"` or `"CON"`, never `None`
-- [ ] Test no tiebreaker when PRO scores are clearly higher (`tiebreaker_used == None`)
-- [ ] Test **Level 1 tiebreaker** (Evidence Quality): agent with higher mean evidence score wins
-- [ ] Test **Level 2 tiebreaker** (V₁ Faithfulness): agent with *lower* V₁ distance wins
-- [ ] Test **Level 3 tiebreaker** (Responsiveness): agent with higher mean score wins
-- [ ] Test **Level 4 tiebreaker** (PRNG): output is deterministic for identical `debate_id`
-- [ ] Test Level 4 tiebreaker seeds from `debate_id` hash (different IDs → may differ)
-- [ ] Test `VerdictSchema.tiebreaker_used` records which level resolved the tie
-- [ ] Test `VerdictSchema` contains `v1_distance_pro` and `v1_distance_con` fields
-- [ ] Test `_resolve_tiebreaker` makes zero LLM calls (mock Anthropic client: assert not called)
+- [x] Test `Judge.evaluate_debate()` returns a `VerdictSchema` for a 10-round debate
+- [x] Test `VerdictSchema.winner` is exactly `"PRO"` or `"CON"`, never `None`
+- [x] Test no tiebreaker when PRO scores are clearly higher (`tiebreaker_used == None`)
+- [x] Test **Level 1 tiebreaker** (Evidence Quality): agent with higher mean evidence score wins
+- [x] Test **Level 2 tiebreaker** (V₁ Faithfulness): agent with *lower* V₁ distance wins
+- [x] Test **Level 3 tiebreaker** (Responsiveness): agent with higher mean score wins
+- [x] Test **Level 4 tiebreaker** (PRNG): output is deterministic for identical `debate_id`
+- [x] Test Level 4 tiebreaker seeds from `debate_id` hash (different IDs → may differ)
+- [x] Test `VerdictSchema.tiebreaker_used` records which level resolved the tie
+- [x] Test `VerdictSchema` contains `v1_distance_pro` and `v1_distance_con` fields
+- [x] Test `_resolve_tiebreaker` makes zero LLM calls (mock Anthropic client: assert not called)
 
 ### 2b.3 — Implementation
 
-- [ ] `src/debate/agents/__init__.py`
-- [ ] `src/debate/agents/base.py` — `BaseAgent(ABC)` with permanent V₁, windowed ledger
-- [ ] `src/debate/agents/pro.py` — `ProAgent`, Anthropic call, prompt caching, `temperature=0`
-- [ ] `src/debate/agents/con.py` — `ConAgent`, Anthropic call, prompt caching, `temperature=0`
-- [ ] `src/debate/engine/ledger.py` — `LedgerManager` with serialize + claim_ids
-- [ ] `src/debate/evaluation/judge.py` — `Judge`, `RoundScores`, 4-level tiebreaker
+- [x] `src/debate/agents/__init__.py`
+- [x] `src/debate/agents/base.py` — `BaseAgent(ABC)` with permanent V₁, windowed ledger
+- [x] `src/debate/agents/pro.py` — `ProAgent`, Anthropic call, prompt caching, `temperature=0`
+- [x] `src/debate/agents/con.py` — `ConAgent`, Anthropic call, prompt caching, `temperature=0`
+- [x] `src/debate/engine/ledger.py` — `LedgerManager` with serialize + claim_ids
+- [x] `src/debate/evaluation/judge.py` — `Judge`, `RoundScores`, 4-level tiebreaker
 
 ### Phase 2b Gate
 
@@ -165,27 +165,27 @@ wc -l src/debate/evaluation/judge.py  # must be < 140
 
 ### 3.1 — Tests First (`tests/test_pipeline.py`)
 
-- [ ] Test `run_debate()` returns a result with exactly `max_rounds` rounds
-- [ ] Test each round in result is a valid `RoundSchema`
-- [ ] Test `run_debate()` result contains a valid `VerdictSchema`
-- [ ] Test `VerdictSchema.winner` is set (not `None`)
-- [ ] Test both agents have `v1_embedding` set (not `None`) after round 1
-- [ ] Test PRO agent's `get_windowed_ledger(3)` returns ≤ 3 entries at round 6
-- [ ] Test `run_benchmarks(n=2)` returns exactly 2 `DebateResult` objects
-- [ ] Test each `DebateResult` has `latency_per_round` list of length `max_rounds`
-- [ ] Test each `DebateResult` has `tokens_per_debate: int > 0`
-- [ ] Test each `DebateResult` has `cost_per_debate: float > 0`
-- [ ] Test each `DebateResult` has `context_cache_efficiency: float` in `[0.0, 1.0]`
-- [ ] Test `BenchmarkReporter.export(results)` writes a valid JSON file
-- [ ] Test exported JSON contains `benchmark_metadata`, `runs`, `aggregates` keys
-- [ ] Test `aggregates.mean_tokens_per_debate` equals mean of per-run token counts
+- [x] Test `run_debate()` returns a result with exactly `max_rounds` rounds
+- [x] Test each round in result is a valid `RoundSchema`
+- [x] Test `run_debate()` result contains a valid `VerdictSchema`
+- [x] Test `VerdictSchema.winner` is set (not `None`)
+- [x] Test both agents have `v1_embedding` set (not `None`) after round 1
+- [x] Test PRO agent's `get_windowed_ledger(3)` returns ≤ 3 entries at round 6
+- [x] Test `run_benchmarks(n=2)` returns exactly 2 `DebateResult` objects
+- [x] Test each `DebateResult` has `latency_per_round` list of length `max_rounds`
+- [x] Test each `DebateResult` has `tokens_per_debate: int > 0`
+- [x] Test each `DebateResult` has `cost_per_debate: float > 0`
+- [x] Test each `DebateResult` has `context_cache_efficiency: float` in `[0.0, 1.0]`
+- [x] Test `BenchmarkReporter.export(results)` writes a valid JSON file
+- [x] Test exported JSON contains `benchmark_metadata`, `runs`, `aggregates` keys
+- [x] Test `aggregates.mean_tokens_per_debate` equals mean of per-run token counts
 
 ### 3.2 — Implementation
 
-- [ ] `src/debate/engine/pipeline.py` — `DebateResult`, `run_debate()`, `run_benchmarks()`
-- [ ] `src/debate/benchmarks/__init__.py`
-- [ ] `src/debate/benchmarks/reporter.py` — `BenchmarkReporter`, JSON export
-- [ ] `main.py` — thin CLI ≤ 20 lines: argparse + `pipeline.run_benchmarks()` call
+- [x] `src/debate/engine/pipeline.py` — `DebateResult`, `run_debate()`, `run_benchmarks()`
+- [x] `src/debate/benchmarks/__init__.py`
+- [x] `src/debate/benchmarks/reporter.py` — `BenchmarkReporter`, JSON export
+- [x] `main.py` — thin CLI ≤ 20 lines: argparse + `pipeline.run_benchmarks()` call
 
 ### Phase 3 Gate (Full System Verification)
 
@@ -237,45 +237,45 @@ timeout enforcement, and retry-with-backoff are centralized and config-driven.
 All tests use `unittest.mock` — zero real network calls.
 
 **GatekeeperConfig**
-- [ ] Test config loads `requests_per_minute` from `config/rate_limits.json`
-- [ ] Test config loads `max_retries`, `timeout_seconds`, `backoff_factor` from JSON
-- [ ] Test config raises `FileNotFoundError` if `rate_limits.json` is missing
+- [x] Test config loads `requests_per_minute` from `config/rate_limits.json`
+- [x] Test config loads `max_retries`, `timeout_seconds`, `backoff_factor` from JSON
+- [x] Test config raises `FileNotFoundError` if `rate_limits.json` is missing
 
 **Rate Limiting**
-- [ ] Test a single `gatekeeper.call()` succeeds when bucket has tokens
-- [ ] Test `gatekeeper.call()` blocks (sleeps) when bucket is empty, then succeeds
-- [ ] Test that N calls within a minute do not exceed `requests_per_minute`
+- [x] Test a single `gatekeeper.call()` succeeds when bucket has tokens
+- [x] Test `gatekeeper.call()` blocks (sleeps) when bucket is empty, then succeeds
+- [x] Test that N calls within a minute do not exceed `requests_per_minute`
 
 **Timeout**
-- [ ] Test `gatekeeper.call()` raises `GatekeeperTimeoutError` when SDK raises `APITimeoutError` on every attempt
-- [ ] Test timeout is passed to the underlying SDK call as `timeout=timeout_seconds`
+- [x] Test `gatekeeper.call()` raises `GatekeeperTimeoutError` when SDK raises `APITimeoutError` on every attempt
+- [x] Test timeout is passed to the underlying SDK call as `timeout=timeout_seconds`
 
 **Retry Logic**
-- [ ] Test `gatekeeper.call()` retries on `RateLimitError` (429) up to `max_retries` times
-- [ ] Test `gatekeeper.call()` retries on `InternalServerError` with status 529
-- [ ] Test `gatekeeper.call()` does NOT retry on `AuthenticationError` (401)
-- [ ] Test `gatekeeper.call()` does NOT retry on `BadRequestError` (400)
-- [ ] Test after successful retry, the return value is the mock response (not an exception)
-- [ ] Test exponential backoff: sleep duration on retry 0 = `backoff_factor * (2**0) ± jitter`
-- [ ] Test all retries exhausted → `GatekeeperRateLimitError` raised (not swallowed)
+- [x] Test `gatekeeper.call()` retries on `RateLimitError` (429) up to `max_retries` times
+- [x] Test `gatekeeper.call()` retries on `InternalServerError` with status 529
+- [x] Test `gatekeeper.call()` does NOT retry on `AuthenticationError` (401)
+- [x] Test `gatekeeper.call()` does NOT retry on `BadRequestError` (400)
+- [x] Test after successful retry, the return value is the mock response (not an exception)
+- [x] Test exponential backoff: sleep duration on retry 0 = `backoff_factor * (2**0) ± jitter`
+- [x] Test all retries exhausted → `GatekeeperRateLimitError` raised (not swallowed)
 
 **Integration with Agents**
-- [ ] Test `ProAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
-- [ ] Test `ConAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
-- [ ] Test agents do NOT call `anthropic.Anthropic.messages.create()` directly (assert not called)
+- [x] Test `ProAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
+- [x] Test `ConAgent.generate_claim()` calls `gatekeeper.call()` exactly once per invocation
+- [x] Test agents do NOT call `anthropic.Anthropic.messages.create()` directly (assert not called)
 
 ### 5.2 — Implementation
 
-- [ ] `src/debate/gatekeeper/__init__.py` — exports `ApiGatekeeper`, `GatekeeperError`, `GatekeeperTimeoutError`, `GatekeeperRateLimitError`
-- [ ] `src/debate/gatekeeper/config.py` — `GatekeeperConfig` dataclass, loads `config/rate_limits.json`
-- [ ] `src/debate/gatekeeper/gatekeeper.py` — `ApiGatekeeper` class with token bucket, timeout, retry (≤ 150 lines)
+- [x] `src/debate/gatekeeper/__init__.py` — exports `ApiGatekeeper`, `GatekeeperError`, `GatekeeperTimeoutError`, `GatekeeperRateLimitError`
+- [x] `src/debate/gatekeeper/config.py` — `GatekeeperConfig` dataclass, loads `config/rate_limits.json`
+- [x] `src/debate/gatekeeper/gatekeeper.py` — `ApiGatekeeper` class with token bucket, timeout, retry (≤ 150 lines)
 
 ### 5.3 — Refactor: Wire Gatekeeper into Agents & Pipeline
 
-- [ ] `src/debate/agents/pro.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
-- [ ] `src/debate/agents/con.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
-- [ ] `src/debate/engine/pipeline.py` — instantiate `ApiGatekeeper` once, inject into both agents
-- [ ] Verify: `grep -rn "messages.create" src/debate/agents/` returns 0 matches
+- [x] `src/debate/agents/pro.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
+- [x] `src/debate/agents/con.py` — accept `ApiGatekeeper` in `__init__`, replace direct SDK call
+- [x] `src/debate/engine/pipeline.py` — instantiate `ApiGatekeeper` once, inject into both agents
+- [x] Verify: `grep -rn "messages.create" src/debate/agents/` returns 0 matches
 
 ### Phase 5 Gate
 
@@ -383,11 +383,11 @@ New file: `tests/test_forecaster.py`
 
 ### 12.3 — Implementation (Phase 3 — pending approval)
 
-- [ ] `src/debate/cli/forecaster.py` — `estimate_tokens()`, `estimate_cost()`,
+- [x] `src/debate/cli/forecaster.py` — `estimate_tokens()`, `estimate_cost()`,
   `confirm_benchmark()` (≤ 40 lines)
-- [ ] `src/debate/cli/handlers.py` — import `confirm_benchmark`; add forecast
+- [x] `src/debate/cli/handlers.py` — import `confirm_benchmark`; add forecast
   + confirmation gate inside `handle_run_benchmark()`; return `[]` on rejection
-- [ ] `src/debate/cli/__init__.py` — no changes required
+- [x] `src/debate/cli/__init__.py` — no changes required
 
 ### Phase 12 Gate
 
@@ -439,22 +439,22 @@ points. External plugins register callables against named events via
 
 ### 7.1 — Tests First (`tests/test_events.py`)
 
-- [ ] Test `EventBus.emit()` with no handlers is a no-op (no exception raised)
-- [ ] Test a registered handler is called exactly once per `emit()`
-- [ ] Test multiple handlers for the same event are all called, in registration order
-- [ ] Test handler exception propagates out of `emit()` (not swallowed)
-- [ ] Test `on()` is thread-safe: 20 concurrent registrations produce no lost handlers
-- [ ] Test `run_debate()` with a recording bus fires all 6 event types in correct sequence
-- [ ] Test `DebateSDK.on()` delegates to the internal `EventBus` instance
-- [ ] Test plugin registered after `DebateSDK()` but before `run_single()` fires correctly
+- [x] Test `EventBus.emit()` with no handlers is a no-op (no exception raised)
+- [x] Test a registered handler is called exactly once per `emit()`
+- [x] Test multiple handlers for the same event are all called, in registration order
+- [x] Test handler exception propagates out of `emit()` (not swallowed)
+- [x] Test `on()` is thread-safe: 20 concurrent registrations produce no lost handlers
+- [x] Test `run_debate()` with a recording bus fires all 6 event types in correct sequence
+- [x] Test `DebateSDK.on()` delegates to the internal `EventBus` instance
+- [x] Test plugin registered after `DebateSDK()` but before `run_single()` fires correctly
 
 ### 7.2 — Implementation
 
-- [ ] `src/debate/events/types.py` — six event dataclasses: `DebateStartEvent`, `RoundStartEvent`, `AgentReplyEvent`, `RoundEndEvent`, `BeforeEvaluationEvent`, `DebateEndEvent` (≤ 80 lines)
-- [ ] `src/debate/events/bus.py` — `EventBus` with `on()` (locked) and `emit()` (lock-free read) (≤ 60 lines)
-- [ ] `src/debate/events/__init__.py` — re-exports `EventBus` + all event types with `__all__`
-- [ ] `src/debate/engine/pipeline.py` — `run_debate()` accepts `bus: EventBus | None = None`; fires 6 event types at correct lifecycle points; `run_benchmarks()` passes shared bus
-- [ ] `src/debate/sdk.py` — add `self._bus = EventBus()`; expose `sdk.on(event, handler)`; pass `self._bus` to `run_debate()` and `run_benchmarks()`
+- [x] `src/debate/events/types.py` — six event dataclasses: `DebateStartEvent`, `RoundStartEvent`, `AgentReplyEvent`, `RoundEndEvent`, `BeforeEvaluationEvent`, `DebateEndEvent` (≤ 80 lines)
+- [x] `src/debate/events/bus.py` — `EventBus` with `on()` (locked) and `emit()` (lock-free read) (≤ 60 lines)
+- [x] `src/debate/events/__init__.py` — re-exports `EventBus` + all event types with `__all__`
+- [x] `src/debate/engine/pipeline.py` — `run_debate()` accepts `bus: EventBus | None = None`; fires 6 event types at correct lifecycle points; `run_benchmarks()` passes shared bus
+- [x] `src/debate/sdk.py` — add `self._bus = EventBus()`; expose `sdk.on(event, handler)`; pass `self._bus` to `run_debate()` and `run_benchmarks()`
 
 ### Phase 7 Gate
 
@@ -486,42 +486,42 @@ Run `uv run pytest -v` after each file is migrated.
 Migrate each file from `from src.debate.X import Y` to `from ..X import Y`
 (or `from .X import Y` for same-package imports):
 
-- [ ] `src/debate/agents/base.py`
-- [ ] `src/debate/agents/pro.py`
-- [ ] `src/debate/agents/con.py`
-- [ ] `src/debate/engine/pipeline.py`
-- [ ] `src/debate/engine/ledger.py`
-- [ ] `src/debate/engine/embeddings.py`
-- [ ] `src/debate/evaluation/judge.py`
-- [ ] `src/debate/evaluation/responsiveness.py`
-- [ ] `src/debate/evaluation/semantic_drift.py`
-- [ ] `src/debate/gatekeeper/gatekeeper.py`
-- [ ] `src/debate/gatekeeper/config.py`
-- [ ] `src/debate/benchmarks/reporter.py`
-- [ ] `src/debate/cli/menu.py`
-- [ ] `src/debate/cli/handlers.py`
-- [ ] `src/debate/sdk.py`
-- [ ] `src/debate/analysis.py`
-- [ ] `src/debate/config.py`
+- [x] `src/debate/agents/base.py`
+- [x] `src/debate/agents/pro.py`
+- [x] `src/debate/agents/con.py`
+- [x] `src/debate/engine/pipeline.py`
+- [x] `src/debate/engine/ledger.py`
+- [x] `src/debate/engine/embeddings.py`
+- [x] `src/debate/evaluation/judge.py`
+- [x] `src/debate/evaluation/responsiveness.py`
+- [x] `src/debate/evaluation/semantic_drift.py`
+- [x] `src/debate/gatekeeper/gatekeeper.py`
+- [x] `src/debate/gatekeeper/config.py`
+- [x] `src/debate/benchmarks/reporter.py`
+- [x] `src/debate/cli/menu.py`
+- [x] `src/debate/cli/handlers.py`
+- [x] `src/debate/sdk.py`
+- [x] `src/debate/analysis.py`
+- [x] `src/debate/config.py`
 
 ### 8.3 — `__all__` Population
 
 Add `__all__` to every empty `__init__.py` and update the two that already
 have it (`gatekeeper`, `logging`) to verify completeness:
 
-- [ ] `src/debate/__init__.py` — `["DebateSDK"]`
-- [ ] `src/debate/agents/__init__.py` — `["BaseAgent", "ProAgent", "ConAgent"]`
-- [ ] `src/debate/engine/__init__.py` — `["DebateResult", "run_debate", "run_benchmarks"]`
-- [ ] `src/debate/evaluation/__init__.py` — `["Judge", "ResponsivenessCalculator", "SemanticDriftEvaluator", "DriftResult"]`
-- [ ] `src/debate/schemas/__init__.py` — `["ClaimPayloadSchema", "EvidenceSchema", "LedgerEntry", "RoundSchema", "VerdictSchema"]`
-- [ ] `src/debate/benchmarks/__init__.py` — `["BenchmarkReporter"]`
-- [ ] `src/debate/cli/__init__.py` — `["run_loop"]`
+- [x] `src/debate/__init__.py` — `["DebateSDK"]`
+- [x] `src/debate/agents/__init__.py` — `["BaseAgent", "ProAgent", "ConAgent"]`
+- [x] `src/debate/engine/__init__.py` — `["DebateResult", "run_debate", "run_benchmarks"]`
+- [x] `src/debate/evaluation/__init__.py` — `["Judge", "ResponsivenessCalculator", "SemanticDriftEvaluator", "DriftResult"]`
+- [x] `src/debate/schemas/__init__.py` — `["ClaimPayloadSchema", "EvidenceSchema", "LedgerEntry", "RoundSchema", "VerdictSchema"]`
+- [x] `src/debate/benchmarks/__init__.py` — `["BenchmarkReporter"]`
+- [x] `src/debate/cli/__init__.py` — `["run_loop"]`
 
 ### 8.4 — Entry Point
 
-- [ ] `src/debate/cli/entry.py` — thin argparse wrapper ≤ 20 lines; mirrors `main.py` but importable
-- [ ] `pyproject.toml` — add `[project.scripts] debate = "debate.cli.entry:main"` and `[tool.setuptools.packages.find]`
-- [ ] `main.py` — delegate to `debate.cli.entry:main()` (stays ≤ 22 lines)
+- [x] `src/debate/cli/entry.py` — thin argparse wrapper ≤ 20 lines; mirrors `main.py` but importable
+- [x] `pyproject.toml` — add `[project.scripts] debate = "debate.cli.entry:main"` and `[tool.setuptools.packages.find]`
+- [x] `main.py` — delegate to `debate.cli.entry:main()` (stays ≤ 22 lines)
 
 ### Phase 8 Gate
 
@@ -550,16 +550,16 @@ CLI benchmark handler; add an ISO/IEC 25010 compliance section to `README.md`.
 
 ### 9.1 — Tests First (`tests/test_progress.py`)
 
-- [ ] Test `run_benchmarks(n=2)` completes without error when `rich` is available
-- [ ] Test progress display is suppressed (no output) when running under pytest (no TTY)
-- [ ] Test `handle_run_benchmark()` in handlers.py calls `run_benchmark()` and returns results
+- [x] Test `run_benchmarks(n=2)` completes without error when `rich` is available
+- [x] Test progress display is suppressed (no output) when running under pytest (no TTY)
+- [x] Test `handle_run_benchmark()` in handlers.py calls `run_benchmark()` and returns results
 
 ### 9.2 — Implementation
 
-- [ ] `src/debate/engine/pipeline.py` — wrap `ThreadPoolExecutor` block in `rich.progress.Progress`; guard with `if sys.stdout.isatty()` so CI logs stay clean
-- [ ] `src/debate/cli/handlers.py` — `handle_run_benchmark()` shows per-run progress via `rich` Live display
-- [ ] `pyproject.toml` — `rich>=13.0.0` already added (Phase 2)
-- [ ] `README.md` — add `## Quality Standard Compliance (ISO/IEC 25010)` section with 8-row table (see PRD §4.2)
+- [x] `src/debate/engine/pipeline.py` — wrap `ThreadPoolExecutor` block in `rich.progress.Progress`; guard with `if sys.stdout.isatty()` so CI logs stay clean
+- [x] `src/debate/cli/handlers.py` — `handle_run_benchmark()` shows per-run progress via `rich` Live display
+- [x] `pyproject.toml` — `rich>=13.0.0` already added (Phase 2)
+- [x] `README.md` — add `## Quality Standard Compliance (ISO/IEC 25010)` section with 8-row table (see PRD §4.2)
 
 ### Phase 9 Gate
 
@@ -608,20 +608,20 @@ parallel benchmark execution, automated graph generation.
 
 #### 6a.1 — Tests First (`tests/test_sdk.py`)
 
-- [ ] Test `DebateSDK()` instantiates without error (no real API call)
-- [ ] Test `DebateSDK(topic="custom topic")` stores topic and passes it to agents
-- [ ] Test `DebateSDK.run_single()` calls `run_debate()` exactly once (mock pipeline)
-- [ ] Test `DebateSDK.run_benchmark(n=2)` calls `run_debate()` exactly 2 times
-- [ ] Test `DebateSDK.export(results, path)` delegates to `BenchmarkReporter.export()`
-- [ ] Test `DebateSDK.generate_analysis(json_path, out_dir)` calls `analysis.generate_all()`
-- [ ] Test SDK raises `ValueError` if `run_single()` is called before a topic is set and no default exists
-- [ ] Test SDK exposes no internal module references (only `debate.sdk` needed in imports)
+- [x] Test `DebateSDK()` instantiates without error (no real API call)
+- [x] Test `DebateSDK(topic="custom topic")` stores topic and passes it to agents
+- [x] Test `DebateSDK.run_single()` calls `run_debate()` exactly once (mock pipeline)
+- [x] Test `DebateSDK.run_benchmark(n=2)` calls `run_debate()` exactly 2 times
+- [x] Test `DebateSDK.export(results, path)` delegates to `BenchmarkReporter.export()`
+- [x] Test `DebateSDK.generate_analysis(json_path, out_dir)` calls `analysis.generate_all()`
+- [x] Test SDK raises `ValueError` if `run_single()` is called before a topic is set and no default exists
+- [x] Test SDK exposes no internal module references (only `debate.sdk` needed in imports)
 
 #### 6a.2 — Implementation
 
-- [ ] `src/debate/sdk.py` — `DebateSDK` class (≤ 100 lines)
-- [ ] `src/debate/__init__.py` — re-export `DebateSDK` so `from debate import DebateSDK` works
-- [ ] `config/topics.json` — list of debate topics + default (already created in Phase 2)
+- [x] `src/debate/sdk.py` — `DebateSDK` class (≤ 100 lines)
+- [x] `src/debate/__init__.py` — re-export `DebateSDK` so `from debate import DebateSDK` works
+- [x] `config/topics.json` — list of debate topics + default (already created in Phase 2)
 
 #### 6a Gate
 
@@ -637,23 +637,23 @@ wc -l src/debate/sdk.py   # must be ≤ 100
 
 #### 6b.1 — Tests First (`tests/test_cli.py`)
 
-- [ ] Test `menu.display_topics(["A", "B"])` prints numbered list without error
-- [ ] Test `menu.parse_choice("2", max_val=3)` returns `2`
-- [ ] Test `menu.parse_choice("0", max_val=3)` raises `ValueError` (out of range)
-- [ ] Test `menu.parse_choice("abc", max_val=3)` raises `ValueError` (non-integer)
-- [ ] Test `handlers.handle_topic_selection(sdk, topics, "1")` sets topic to `topics[0]`
-- [ ] Test `handlers.handle_run_single(sdk)` calls `sdk.run_single()` and returns result
-- [ ] Test `handlers.handle_run_benchmark(sdk, n=2)` calls `sdk.run_benchmark(n=2)`
-- [ ] Test `handlers.handle_generate_analysis(sdk)` calls `sdk.generate_analysis()` with correct paths
-- [ ] Test `main.py --interactive` flag triggers interactive loop (mock `menu.run_loop`)
-- [ ] Test `main.py` without `--interactive` flag retains existing argparse behaviour
+- [x] Test `menu.display_topics(["A", "B"])` prints numbered list without error
+- [x] Test `menu.parse_choice("2", max_val=3)` returns `2`
+- [x] Test `menu.parse_choice("0", max_val=3)` raises `ValueError` (out of range)
+- [x] Test `menu.parse_choice("abc", max_val=3)` raises `ValueError` (non-integer)
+- [x] Test `handlers.handle_topic_selection(sdk, topics, "1")` sets topic to `topics[0]`
+- [x] Test `handlers.handle_run_single(sdk)` calls `sdk.run_single()` and returns result
+- [x] Test `handlers.handle_run_benchmark(sdk, n=2)` calls `sdk.run_benchmark(n=2)`
+- [x] Test `handlers.handle_generate_analysis(sdk)` calls `sdk.generate_analysis()` with correct paths
+- [x] Test `main.py --interactive` flag triggers interactive loop (mock `menu.run_loop`)
+- [x] Test `main.py` without `--interactive` flag retains existing argparse behaviour
 
 #### 6b.2 — Implementation
 
-- [ ] `src/debate/cli/__init__.py`
-- [ ] `src/debate/cli/menu.py` — `run_loop()`, `display_menu()`, `display_topics()`, `parse_choice()` (≤ 120 lines)
-- [ ] `src/debate/cli/handlers.py` — `handle_*` functions (≤ 100 lines)
-- [ ] `main.py` — add `--interactive` flag, dispatch to `menu.run_loop()` (stays ≤ 20 lines)
+- [x] `src/debate/cli/__init__.py`
+- [x] `src/debate/cli/menu.py` — `run_loop()`, `display_menu()`, `display_topics()`, `parse_choice()` (≤ 120 lines)
+- [x] `src/debate/cli/handlers.py` — `handle_*` functions (≤ 100 lines)
+- [x] `main.py` — add `--interactive` flag, dispatch to `menu.run_loop()` (stays ≤ 20 lines)
 
 #### 6b Gate
 
@@ -671,19 +671,19 @@ wc -l main.py                    # ≤ 20
 
 #### 6c.1 — Tests First (`tests/test_parallel_benchmarks.py`)
 
-- [ ] Test `run_benchmarks(n=3)` returns exactly 3 `DebateResult` objects (mock `run_debate`)
-- [ ] Test results are returned even when `run_debate` calls are non-deterministically ordered (futures)
-- [ ] Test `run_benchmarks` uses at most `MAX_WORKERS` concurrent threads (patch `ThreadPoolExecutor`)
-- [ ] Test `max_workers` is read from `GatekeeperConfig` (not hardcoded)
-- [ ] Test a single worker exception causes `run_benchmarks` to re-raise (no silent swallow)
-- [ ] Test `ApiGatekeeper` is instantiated exactly once per `run_benchmarks` call (shared across threads)
-- [ ] Test thread-safety: 4 concurrent `run_debate` mock calls all complete without deadlock (timeout=5s)
+- [x] Test `run_benchmarks(n=3)` returns exactly 3 `DebateResult` objects (mock `run_debate`)
+- [x] Test results are returned even when `run_debate` calls are non-deterministically ordered (futures)
+- [x] Test `run_benchmarks` uses at most `MAX_WORKERS` concurrent threads (patch `ThreadPoolExecutor`)
+- [x] Test `max_workers` is read from `GatekeeperConfig` (not hardcoded)
+- [x] Test a single worker exception causes `run_benchmarks` to re-raise (no silent swallow)
+- [x] Test `ApiGatekeeper` is instantiated exactly once per `run_benchmarks` call (shared across threads)
+- [x] Test thread-safety: 4 concurrent `run_debate` mock calls all complete without deadlock (timeout=5s)
 
 #### 6c.2 — Implementation
 
-- [ ] `src/debate/engine/pipeline.py` — replace list comprehension with `ThreadPoolExecutor` (≤ 150 lines)
-- [ ] `src/debate/gatekeeper/config.py` — expose `max_workers: int` loaded from `config/rate_limits.json`
-- [ ] `src/debate/config.py` — add `MAX_WORKERS: int = 4` and `ASSETS_DIR: str = "assets/"`
+- [x] `src/debate/engine/pipeline.py` — replace list comprehension with `ThreadPoolExecutor` (≤ 150 lines)
+- [x] `src/debate/gatekeeper/config.py` — expose `max_workers: int` loaded from `config/rate_limits.json`
+- [x] `src/debate/config.py` — add `MAX_WORKERS: int = 4` and `ASSETS_DIR: str = "assets/"`
 
 #### 6c Gate
 
@@ -701,24 +701,24 @@ grep -n "max_workers\s*=\s*[0-9]" src/debate/engine/pipeline.py && echo "FAIL: h
 
 #### 6d.1 — Tests First (`tests/test_analysis.py`)
 
-- [ ] Test `generate_all(json_path, out_dir)` returns a list of 4 `Path` objects
-- [ ] Test all 4 returned paths exist on disk after the call (files are written)
-- [ ] Test returned filenames match: `latency_per_round.png`, `tokens_per_run.png`, `cache_efficiency.png`, `winner_distribution.png`
-- [ ] Test `generate_all` creates `out_dir` if it does not exist
-- [ ] Test `generate_all` raises `FileNotFoundError` if `json_path` does not exist
-- [ ] Test `generate_all` raises `KeyError` if JSON is missing `runs` key
-- [ ] Test DPI is loaded from `config/visualization_config.json` (not hardcoded)
-- [ ] Test format is loaded from `config/visualization_config.json` (not hardcoded)
-- [ ] Test `generate_all` with a 1-run JSON produces valid graphs (no crash on single-item stats)
-- [ ] Test `generate_all` with `n=5` runs produces `latency_per_round.png` with correct data shape
+- [x] Test `generate_all(json_path, out_dir)` returns a list of 4 `Path` objects
+- [x] Test all 4 returned paths exist on disk after the call (files are written)
+- [x] Test returned filenames match: `latency_per_round.png`, `tokens_per_run.png`, `cache_efficiency.png`, `winner_distribution.png`
+- [x] Test `generate_all` creates `out_dir` if it does not exist
+- [x] Test `generate_all` raises `FileNotFoundError` if `json_path` does not exist
+- [x] Test `generate_all` raises `KeyError` if JSON is missing `runs` key
+- [x] Test DPI is loaded from `config/visualization_config.json` (not hardcoded)
+- [x] Test format is loaded from `config/visualization_config.json` (not hardcoded)
+- [x] Test `generate_all` with a 1-run JSON produces valid graphs (no crash on single-item stats)
+- [x] Test `generate_all` with `n=5` runs produces `latency_per_round.png` with correct data shape
 
 #### 6d.2 — Implementation
 
-- [ ] `src/debate/analysis.py` — `generate_all()` + 4 `_plot_*` helpers (≤ 150 lines)
-- [ ] `config/visualization_config.json` — DPI, format, style, figsize, assets_dir (already created in Phase 2)
-- [ ] `assets/` — add to `.gitignore` (generated files)
-- [ ] `pyproject.toml` — add `matplotlib>=3.8.0` and `seaborn>=0.13.0`
-- [ ] `uv sync`
+- [x] `src/debate/analysis.py` — `generate_all()` + 4 `_plot_*` helpers (≤ 150 lines)
+- [x] `config/visualization_config.json` — DPI, format, style, figsize, assets_dir (already created in Phase 2)
+- [x] `assets/` — add to `.gitignore` (generated files)
+- [x] `pyproject.toml` — add `matplotlib>=3.8.0` and `seaborn>=0.13.0`
+- [x] `uv sync`
 
 #### 6d Gate
 
@@ -774,35 +774,35 @@ loaded from `config/logging_config.json`. Zero hardcoded values in Python.
 
 ### 4.1 — Tests First (`tests/test_logger.py`)
 
-- [ ] Test `get_logger("x")` returns a `DebateLogger` instance
-- [ ] Test `DebateLogger` exposes `.debug()`, `.info()`, `.warning()`, `.error()` methods
-- [ ] Test config loads `max_files` and `max_lines` from `config/logging_config.json` (not defaults)
-- [ ] Test `log_dir` is created on first use if it does not exist
-- [ ] Test a single log file is created after calling `.info("msg")`
-- [ ] Test log file contains the logged message string
-- [ ] Test line-count rotation: writing `max_lines + 1` lines creates a second log file
-- [ ] Test after rotation, the old file contains exactly `max_lines` lines
-- [ ] Test FIFO eviction: when `max_files + 1` files exist, oldest file is deleted
-- [ ] Test after FIFO eviction, exactly `max_files` files remain in `log_dir`
-- [ ] Test `get_logger("a")` and `get_logger("a")` return the same underlying logger (no handler duplication)
-- [ ] Test log format includes timestamp, level, name, and message fields
-- [ ] Test `emit()` is thread-safe: 10 concurrent threads each writing 50 lines produce no interleaved corruption
+- [x] Test `get_logger("x")` returns a `DebateLogger` instance
+- [x] Test `DebateLogger` exposes `.debug()`, `.info()`, `.warning()`, `.error()` methods
+- [x] Test config loads `max_files` and `max_lines` from `config/logging_config.json` (not defaults)
+- [x] Test `log_dir` is created on first use if it does not exist
+- [x] Test a single log file is created after calling `.info("msg")`
+- [x] Test log file contains the logged message string
+- [x] Test line-count rotation: writing `max_lines + 1` lines creates a second log file
+- [x] Test after rotation, the old file contains exactly `max_lines` lines
+- [x] Test FIFO eviction: when `max_files + 1` files exist, oldest file is deleted
+- [x] Test after FIFO eviction, exactly `max_files` files remain in `log_dir`
+- [x] Test `get_logger("a")` and `get_logger("a")` return the same underlying logger (no handler duplication)
+- [x] Test log format includes timestamp, level, name, and message fields
+- [x] Test `emit()` is thread-safe: 10 concurrent threads each writing 50 lines produce no interleaved corruption
 
 ### 4.2 — Implementation
 
-- [ ] `src/debate/logging/__init__.py` — exports `get_logger(name: str) -> DebateLogger`
-- [ ] `src/debate/logging/logger.py` — `LoggingConfig` dataclass, `FifoRotatingHandler`, `DebateLogger`
-- [ ] `logs/` added to `.gitignore`
-- [ ] `uv run ruff check .` — 0 errors
-- [ ] `find src tests main.py -name "*.py" | xargs wc -l` — no file ≥ 150 lines
+- [x] `src/debate/logging/__init__.py` — exports `get_logger(name: str) -> DebateLogger`
+- [x] `src/debate/logging/logger.py` — `LoggingConfig` dataclass, `FifoRotatingHandler`, `DebateLogger`
+- [x] `logs/` added to `.gitignore`
+- [x] `uv run ruff check .` — 0 errors
+- [x] `find src tests main.py -name "*.py" | xargs wc -l` — no file ≥ 150 lines
 
 ### 4.3 — Refactor: Replace `print()` with Logger
 
-- [ ] `main.py` — replace `print(f"Done ...")` with `logger.info(...)`
-- [ ] `src/debate/engine/pipeline.py` — add `INFO` logs for debate start, each round, verdict
-- [ ] `src/debate/agents/pro.py` — add `DEBUG` log for claim generation and token usage
-- [ ] `src/debate/agents/con.py` — add `DEBUG` log for claim generation and token usage
-- [ ] Verify: `grep -rn "print(" src/ main.py` returns 0 matches
+- [x] `main.py` — replace `print(f"Done ...")` with `logger.info(...)`
+- [x] `src/debate/engine/pipeline.py` — add `INFO` logs for debate start, each round, verdict
+- [x] `src/debate/agents/pro.py` — add `DEBUG` log for claim generation and token usage
+- [x] `src/debate/agents/con.py` — add `DEBUG` log for claim generation and token usage
+- [x] Verify: `grep -rn "print(" src/ main.py` returns 0 matches
 
 ### Phase 4 Gate
 
@@ -843,35 +843,35 @@ bump the package version to `1.0.0` for official release. Integrate the logger i
 New file: `tests/test_shared_logger.py`
 
 **Version tests**
-- [ ] `test_version_is_1_0_0` — `shared.version.__version__ == "1.0.0"`
+- [x] `test_version_is_1_0_0` — `shared.version.__version__ == "1.0.0"`
 
 **`get_logger` unit tests**
-- [ ] `test_get_logger_returns_logger` — returns `logging.Logger` instance
-- [ ] `test_get_logger_creates_log_file` — file appears in `log_dir` after first `.info()`
-- [ ] `test_log_file_contains_message` — written message present in log file text
-- [ ] `test_handler_max_bytes_is_50000` — `RotatingFileHandler.maxBytes == 50_000`
-- [ ] `test_handler_backup_count_is_20` — `RotatingFileHandler.backupCount == 20`
-- [ ] `test_log_format_includes_level_and_name` — WARNING level and logger name in file
-- [ ] `test_get_logger_same_name_no_handler_duplication` — second call returns same object, one handler
-- [ ] `test_logger_exposes_standard_levels` — debug/info/warning/error callable without error
-- [ ] `test_log_dir_is_created_if_missing` — nested path auto-created on first call
-- [ ] `test_rotation_creates_backup_file` — 60 × 1 KB messages triggers rollover
+- [x] `test_get_logger_returns_logger` — returns `logging.Logger` instance
+- [x] `test_get_logger_creates_log_file` — file appears in `log_dir` after first `.info()`
+- [x] `test_log_file_contains_message` — written message present in log file text
+- [x] `test_handler_max_bytes_is_50000` — `RotatingFileHandler.maxBytes == 50_000`
+- [x] `test_handler_backup_count_is_20` — `RotatingFileHandler.backupCount == 20`
+- [x] `test_log_format_includes_level_and_name` — WARNING level and logger name in file
+- [x] `test_get_logger_same_name_no_handler_duplication` — second call returns same object, one handler
+- [x] `test_logger_exposes_standard_levels` — debug/info/warning/error callable without error
+- [x] `test_log_dir_is_created_if_missing` — nested path auto-created on first call
+- [x] `test_rotation_creates_backup_file` — 60 × 1 KB messages triggers rollover
 
 **Integration tests (Gatekeeper / Watchdog)**
-- [ ] `test_gatekeeper_has_shared_logger` — `gatekeeper._logger` is a `logging.Logger`
-- [ ] `test_watchdog_has_shared_logger` — `watchdog._logger` is a `logging.Logger`
+- [x] `test_gatekeeper_has_shared_logger` — `gatekeeper._logger` is a `logging.Logger`
+- [x] `test_watchdog_has_shared_logger` — `watchdog._logger` is a `logging.Logger`
 
 ### 13.3 — Implementation (Phase 3 — pending approval)
 
-- [ ] `src/debate/shared/__init__.py` — re-exports `get_logger`, `__version__` with `__all__`
-- [ ] `src/debate/shared/logger.py` — `get_logger(name, log_dir=None) -> logging.Logger`;
+- [x] `src/debate/shared/__init__.py` — re-exports `get_logger`, `__version__` with `__all__`
+- [x] `src/debate/shared/logger.py` — `get_logger(name, log_dir=None) -> logging.Logger`;
   `RotatingFileHandler(maxBytes=50_000, backupCount=20, delay=True)` (≤ 50 lines)
-- [ ] `src/debate/shared/version.py` — `__version__ = "1.0.0"` (≤ 5 lines)
-- [ ] `src/debate/gatekeeper/gatekeeper.py` — `_logger = get_logger("gatekeeper")`;
+- [x] `src/debate/shared/version.py` — `__version__ = "1.0.0"` (≤ 5 lines)
+- [x] `src/debate/gatekeeper/gatekeeper.py` — `_logger = get_logger("gatekeeper")`;
   log each retry at WARNING, final failure at ERROR
-- [ ] `src/debate/gatekeeper/watchdog.py` — `_logger = get_logger("watchdog")`;
+- [x] `src/debate/gatekeeper/watchdog.py` — `_logger = get_logger("watchdog")`;
   log circuit trip at WARNING, guarded call on open circuit at ERROR
-- [ ] `pyproject.toml` — `version = "0.2.0"` → `"1.0.0"`; classifier `Beta` → `Production/Stable`
+- [x] `pyproject.toml` — `version = "0.2.0"` → `"1.0.0"`; classifier `Beta` → `Production/Stable`
 
 ### Phase 13 Gate
 
