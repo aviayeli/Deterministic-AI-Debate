@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 _VIZ_CONFIG = Path(__file__).parents[2] / "config" / "visualization_config.json"
+_LINE_ALPHA: float = 0.4  # per-run trace opacity in latency chart
 
 
 @dataclass
@@ -35,7 +36,7 @@ def _plot_latency(runs: list[dict], out_dir: Path, cfg: "_VizConfig") -> Path:
     fig, ax = plt.subplots(figsize=cfg.figsize)
     for run in runs:
         lat = run["latency_per_round"]
-        ax.plot(range(1, len(lat) + 1), lat, alpha=0.4, color="steelblue")
+        ax.plot(range(1, len(lat) + 1), lat, alpha=_LINE_ALPHA, color="steelblue")
     max_len = max(len(r["latency_per_round"]) for r in runs)
     means = [
         sum(

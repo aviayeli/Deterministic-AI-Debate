@@ -7,6 +7,7 @@ import anthropic
 
 from ..shared.logger import get_logger
 from .config import GatekeeperConfig
+from .watchdog import Watchdog
 
 _logger = get_logger("gatekeeper")
 
@@ -31,6 +32,7 @@ class ApiGatekeeper:
         self._tokens: float = float(config.requests_per_minute)
         self._last_refill: float = time.monotonic()
         self._refill_interval: float = 60.0 / config.requests_per_minute
+        self._watchdog = Watchdog()
 
     def _acquire_token(self) -> None:
         while True:
@@ -63,7 +65,7 @@ class ApiGatekeeper:
         for attempt in range(self._config.max_retries + 1):
             self._acquire_token()
             try:
-                return self._client.messages.create(**kwargs)
+                return self._watchdog.guard(self._client.messages.create, **kwargs)
             except Exception as exc:
                 if not self._is_retryable(exc):
                     raise

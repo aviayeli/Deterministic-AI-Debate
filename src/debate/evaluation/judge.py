@@ -43,15 +43,17 @@ class Judge:
         checker = DiscourseChecker()
         pro_penalty = _discourse_penalty(pro_agent, checker)
         con_penalty = _discourse_penalty(con_agent, checker)
-        pro_resp = max(0.0, _mean([r.responsiveness_score_pro for r in rounds]) - pro_penalty)
-        con_resp = max(0.0, _mean([r.responsiveness_score_con for r in rounds]) - con_penalty)
+        raw_pro = _mean([r.responsiveness_score_pro for r in rounds])
+        raw_con = _mean([r.responsiveness_score_con for r in rounds])
+        pro_resp = max(0.0, raw_pro - pro_penalty)
+        con_resp = max(0.0, raw_con - con_penalty)
         ev_pro = _mean_ev_quality(getattr(pro_agent, "_ledger", []))
         ev_con = _mean_ev_quality(getattr(con_agent, "_ledger", []))
         v1_pro = _v1_distance(pro_agent)
         v1_con = _v1_distance(con_agent)
 
         winner, tiebreaker = self._resolve(
-            pro_resp, con_resp, ev_pro, ev_con, v1_pro, v1_con, debate_id
+            pro_resp, con_resp, ev_pro, ev_con, v1_pro, v1_con, raw_pro, raw_con, debate_id
         )
         return VerdictSchema(
             winner=winner,
@@ -78,6 +80,8 @@ class Judge:
         ev_con: float,
         v1_pro: float,
         v1_con: float,
+        raw_pro: float,
+        raw_con: float,
         debate_id: str,
     ) -> tuple[str, str | None]:
         if abs(pro - con) > 1e-9:
@@ -86,5 +90,7 @@ class Judge:
             return ("PRO" if ev_pro > ev_con else "CON", "evidence_quality")
         if abs(v1_pro - v1_con) > 1e-9:
             return ("PRO" if v1_pro < v1_con else "CON", "v1_faithfulness")
+        if abs(raw_pro - raw_con) > 1e-9:
+            return ("PRO" if raw_pro > raw_con else "CON", "responsiveness")
         seed = int(hashlib.sha256(debate_id.encode()).hexdigest(), 16) % (2**32)
         return ("PRO" if random.Random(seed).random() < 0.5 else "CON", "prng")
