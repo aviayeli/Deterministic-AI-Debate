@@ -12,11 +12,14 @@ deterministic-ai-debate/
 │
 ├── main.py                                    ≤  20 lines  [HARD LIMIT — CLI shim only]
 ├── .env                                       (config, not Python)
-├── pyproject.toml
+├── pyproject.toml                             v1.0.0 — Production/Stable
 │
 ├── src/debate/
-│   ├── __init__.py                            ~   5 lines
+│   ├── __init__.py                            ~   5 lines  re-exports DebateSDK
 │   ├── config.py                              ~  30 lines  pydantic-settings, .env loading
+│   ├── sdk.py                                 ~  60 lines  DebateSDK public facade
+│   ├── analysis.py                            ~ 140 lines  generate_all() → 4 PNG graphs
+│   ├── sensitivity_runner.py                  ~  75 lines  SensitivityRunner, SensitivityConfig
 │   │
 │   ├── schemas/                               ← IPC contracts (data only, no logic)
 │   │   ├── __init__.py                        ~   5 lines
@@ -28,11 +31,13 @@ deterministic-ai-debate/
 │   │   ├── __init__.py                        ~   5 lines
 │   │   ├── base.py                            ~  85 lines  BaseAgent + permanent V₁ state
 │   │   ├── pro.py                             ~  80 lines  ProAgent (Anthropic, cached prompt)
-│   │   └── con.py                             ~  80 lines  ConAgent (Anthropic, cached prompt)
+│   │   ├── con.py                             ~  80 lines  ConAgent (Anthropic, cached prompt)
+│   │   └── fact_checker.py                    ~  45 lines  FactCheckerSubagent (web search objections)
 │   │
 │   ├── engine/                                ← orchestration + data management
 │   │   ├── __init__.py                        ~   5 lines
-│   │   ├── pipeline.py                        ~ 145 lines  MAIN ORCHESTRATOR [≤150 HARD]
+│   │   ├── pipeline.py                        ~ 147 lines  MAIN ORCHESTRATOR [≤150 HARD]
+│   │   ├── agents_factory.py                  ~  20 lines  make_agents() — extracted from pipeline
 │   │   ├── ledger.py                          ~  75 lines  LedgerManager + truncation logic
 │   │   └── embeddings.py                      ~  65 lines  EmbeddingService (sentence-transformers)
 │   │
@@ -40,21 +45,78 @@ deterministic-ai-debate/
 │   │   ├── __init__.py                        ~   5 lines
 │   │   ├── semantic_drift.py                  ~ 100 lines  SemanticDriftEvaluator
 │   │   ├── responsiveness.py                  ~  60 lines  ResponsivenessCalculator
-│   │   └── judge.py                           ~ 130 lines  Judge + tiebreaker hierarchy
+│   │   ├── discourse.py                       ~  45 lines  DiscourseChecker (civility policy)
+│   │   └── judge.py                           ~ 130 lines  Judge + 4-level tiebreaker hierarchy
+│   │
+│   ├── gatekeeper/                            ← API rate limiting + circuit breaker
+│   │   ├── __init__.py                        ~  10 lines
+│   │   ├── config.py                          ~  35 lines  GatekeeperConfig (rate_limits.json)
+│   │   ├── gatekeeper.py                      ~  85 lines  ApiGatekeeper (token bucket + retry)
+│   │   └── watchdog.py                        ~  60 lines  Watchdog circuit breaker
+│   │
+│   ├── events/                                ← typed publish-subscribe lifecycle hooks
+│   │   ├── __init__.py                        ~   8 lines
+│   │   ├── bus.py                             ~  30 lines  EventBus (thread-safe on/emit)
+│   │   └── types.py                           ~  50 lines  6 typed lifecycle dataclasses
+│   │
+│   ├── router/                                ← topic-driven skill selection
+│   │   ├── __init__.py                        ~   5 lines
+│   │   └── skills.py                          ~  45 lines  TopicRouter keyword → skill mapping
+│   │
+│   ├── tools/                                 ← external search integration
+│   │   ├── __init__.py                        ~   5 lines
+│   │   └── search.py                          ~  35 lines  WebSearchTool (DuckDuckGo)
+│   │
+│   ├── logging/                               ← FIFO rotating file logger
+│   │   ├── __init__.py                        ~   5 lines
+│   │   └── logger.py                          ~ 120 lines  FifoRotatingHandler, DebateLogger
+│   │
+│   ├── shared/                                ← stdlib RotatingFileHandler + version
+│   │   ├── __init__.py                        ~   5 lines
+│   │   ├── logger.py                          ~  50 lines  get_logger() → logging.Logger
+│   │   └── version.py                         ~   3 lines  __version__ = "1.0.0"
+│   │
+│   ├── cli/                                   ← interactive terminal UI
+│   │   ├── __init__.py                        ~   5 lines
+│   │   ├── entry.py                           ~  20 lines  debate console entry point
+│   │   ├── menu.py                            ~ 120 lines  run_loop(), display_menu()
+│   │   ├── handlers.py                        ~ 100 lines  handle_*() functions
+│   │   └── forecaster.py                      ~  40 lines  cost/token estimator + confirm
 │   │
 │   └── benchmarks/
 │       ├── __init__.py                        ~   5 lines
 │       └── reporter.py                        ~  65 lines  BenchmarkReporter → JSON export
 │
-└── tests/
-    ├── conftest.py                            ~  40 lines  shared fixtures
-    ├── test_schemas.py                        ~  80 lines  Phase 1
-    ├── test_embeddings.py                     ~  50 lines  Phase 2a
-    ├── test_semantic_drift.py                 ~  90 lines  Phase 2a
-    ├── test_responsiveness.py                 ~  70 lines  Phase 2a
-    ├── test_ledger.py                         ~  60 lines  Phase 2b
-    ├── test_judge.py                          ~ 100 lines  Phase 2b
-    └── test_pipeline.py                       ~ 120 lines  Phase 3
+├── config/
+│   ├── rate_limits.json                       requests_per_minute, retries, max_workers
+│   ├── topics.json                            debate topics list + default
+│   ├── logging_config.json                    max_files, max_lines, log_dir
+│   └── visualization_config.json             DPI, format, style, figsize
+│
+└── tests/                                     247 tests, 0 API calls required
+    ├── test_schemas.py                        Phase 1
+    ├── test_embeddings.py                     Phase 2a
+    ├── test_semantic_drift.py                 Phase 2a
+    ├── test_responsiveness.py                 Phase 2a
+    ├── test_ledger.py                         Phase 2b
+    ├── test_pipeline.py                       Phase 3
+    ├── test_logger.py                         Phase 4
+    ├── test_gatekeeper.py                     Phase 5
+    ├── test_sdk.py                            Phase 6a
+    ├── test_cli.py                            Phase 6b
+    ├── test_parallel_benchmarks.py            Phase 6c
+    ├── test_analysis.py                       Phase 6d
+    ├── test_events.py                         Phase 7
+    ├── test_progress.py                       Phase 9
+    ├── test_router.py                         Bonus
+    ├── test_fact_checker.py                   Bonus
+    ├── test_search.py                         Bonus
+    ├── test_discourse.py                      Bonus
+    ├── test_chaos.py                          Phase 10
+    ├── test_sensitivity.py                    Phase 10
+    ├── test_watchdog.py                       Phase 10
+    ├── test_forecaster.py                     Phase 12
+    └── test_shared_logger.py                  Phase 13
 ```
 
 ---
@@ -683,3 +745,73 @@ The six lifecycle events and their emission points are:
 | Abstract base class / subclass hooks | Every new hook point requires modifying `pipeline.py` (adding an abstract method call), directly violating OCP. Inheritance also prevents multiple independent plugins. |
 | Direct callback injection into `run_debate()` | Passing callbacks as function parameters couples the pipeline signature to every possible observer, producing an unmanageable argument list as the plugin surface grows. |
 | `multiprocessing` message queue | Introduces IPC serialisation overhead and prevents handlers from sharing in-process state with the main debate run — unnecessary complexity for an in-process instrumentation use case. |
+
+---
+
+## CLAUDE.md as Prompt Engineering and Architectural Constraint Strategy
+
+This project was developed using Claude Code (Anthropic's AI coding CLI) with a `CLAUDE.md` file at the repository root serving as the **binding contract** between the human architect and the AI coding agent. This section documents how the `CLAUDE.md` contract functioned as the primary prompt engineering and architectural constraint strategy for the project.
+
+### What is CLAUDE.md?
+
+`CLAUDE.md` is a session-persistent instruction file that Claude Code loads at the start of every conversation. Unlike ad-hoc prompting — where rules must be restated in each session — `CLAUDE.md` provides **versioned, project-scoped rules** that the AI agent honours across all tool calls, file edits, and implementation decisions without reminders. It is the AI-native equivalent of a coding standards document, except it is **enforced at the model level** rather than by a lint tool.
+
+---
+
+### Karpathy's Rules: Explicit Invariants, Fail-Loud
+
+The constraints in `CLAUDE.md` were inspired by Andrej Karpathy's philosophy of making invariants **explicit, checked, and non-negotiable**. The key principle: every property that matters for correctness must be enforced structurally — not documented and hoped for, but made impossible to violate silently.
+
+| Invariant | Enforcement Mechanism | Consequence of Violation |
+|---|---|---|
+| `v1_embedding` is immutable after Round 1 | `set_v1_embedding()` raises `RuntimeError` on second call | Silent positional drift — all drift metrics become invalid; benchmark is scientifically worthless |
+| No Python file > 150 lines | Grading automation + `find` gate in every phase | Forces Single Responsibility Principle; prevents "god files" that accumulate undocumented logic |
+| All Anthropic calls through `ApiGatekeeper` | No `messages.create()` permitted in `agents/` | Silent rate-limit failures, uncontrolled cost, and Watchdog bypass |
+| `temperature=0` on all LLM calls | Enforced in agent constructors via Anthropic SDK parameter | Non-deterministic benchmark output — different winners on identical inputs |
+| `VerdictSchema.winner` is never null | 4-level deterministic tiebreaker terminates in `prng` | `None` verdicts in benchmark JSON; aggregates crash on `argmax(None)` |
+| No hardcoded hyperparameters | `.env` + `pydantic-settings`; startup error on misconfiguration | Reproducibility broken — a different lab cannot reproduce results without source code archaeology |
+
+The `CLAUDE.md` file encoded these invariants as **literal rules the AI agent could not violate**. When the agent proposed an edit that would breach one — for example, calling `set_v1_embedding()` twice during a retry path — the rule in `CLAUDE.md` caused the model to self-correct before submitting the edit.
+
+---
+
+### Agentic Extensions: TDD-First, Phase Gates, Module Fragmentation
+
+Beyond Karpathy's invariant rules, `CLAUDE.md` encoded **agentic workflow extensions** — meta-rules governing *how* the AI agent was permitted to approach implementation tasks. These prevented the most common failure modes of AI-assisted coding:
+
+**1. TDD-First Mandate**
+No implementation file could be written until the corresponding test file existed and the tests were designed to fail. This prevented the AI from taking shortcuts that would produce passing-but-wrong implementations — a particularly acute risk when the AI is both writing the tests and the code.
+
+**2. Phase Gates**
+After each phase, the agent was required to run:
+```bash
+uv run ruff check .          # zero errors before proceeding
+uv run pytest -v             # full suite green before proceeding
+find src tests main.py -name "*.py" | xargs wc -l   # no file ≥ 150 lines
+```
+This transformed the AI's development loop into a systematic, verifiable workflow.
+
+**3. Module Fragmentation Rules**
+The 150-line limit was encoded with a specific consequence: when a module approached the limit, the agent was required to split it along functional seams rather than compress logic. This rule produced:
+- `agents_factory.py` — extracted from `pipeline.py` when it reached 148 lines
+- `discourse.py` — extracted from `judge.py` to isolate the civility policy
+- `shared/logger.py` — separated from `logging/logger.py` for stdlib vs. custom concerns
+
+**4. Dependency Directionality**
+The `CLAUDE.md` described the acyclic dependency graph explicitly: `config` and `schemas` are leaves; `pipeline` is the only orchestrator; no evaluation module may import from `engine`. The agent could not introduce an import that would create a cycle — the rule was checked as a `grep` command the agent was required to run.
+
+---
+
+### How CLAUDE.md Prevented Silent Failures and Deterministic Routing Issues
+
+The most critical function of the `CLAUDE.md` contract was preventing **silent failures** — conditions where the system produces a result that appears correct but is scientifically invalid:
+
+**Silent Semantic Drift**: Without the `v1_embedding` immutability rule, an agent under iterative revision pressure might silently overwrite the V₁ anchor during a JSON-retry path. The `RuntimeError` made this failure **loud and immediate** — catchable in the test suite, not discoverable only by examining benchmark plots.
+
+**Deterministic Routing Bypass**: Without the "all Anthropic calls through `ApiGatekeeper`" rule, a future developer (or the AI itself) might introduce a direct `messages.create()` call inside a helper function, bypassing rate limiting, backoff, and the Watchdog circuit breaker. The gatekeeper rule made routing **structurally impossible to accidentally bypass** — verified by `grep -rn "messages.create" src/debate/agents/`.
+
+**Context Explosion**: Without the explicit `LEDGER_WINDOW` truncation protocol, the AI would naturally expand context passed to LLMs in service of "correctness," silently blowing up benchmark costs. The truncation rule made cost overruns **structurally impossible** — the ledger window is fixed at startup, not negotiated per-round.
+
+**Hardcoded Hyperparameters**: Without the "no hardcoded values in Python" rule, the AI would embed values like `0.3` or `0.4` as literals during rapid prototyping. The `pydantic-settings` mandate made misconfiguration **a startup-time error with a clear message**, not a silent wrong answer buried in run 4 of 5 benchmarks.
+
+The `CLAUDE.md` contract was, in essence, the difference between a **research-reproducible system** and an **impressively-functioning but non-reproducible prototype**. Every phase gate, every `RuntimeError`, every config-driven JSON file, and every forced module split traces back to a rule in that contract.

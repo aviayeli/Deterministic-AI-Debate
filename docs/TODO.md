@@ -416,6 +416,66 @@ echo -e "3\n1\ny" | uv run python main.py --interactive
 
 ---
 
+## Phase 10: Chaos Engineering & Sensitivity Analysis
+
+**Goal**: Prove the system degrades gracefully under network failures, malformed API
+responses, and circuit-breaker trips; quantify how tiebreaker frequency and context
+truncation change across the hyperparameter grid.
+
+**Deliverables**: `src/debate/gatekeeper/watchdog.py`, `src/debate/sensitivity_runner.py`,
+`tests/test_chaos.py` (21 tests), `tests/test_sensitivity.py` (13 tests), `tests/test_watchdog.py` (7 tests)
+
+### 10.1 — Watchdog Circuit Breaker (`tests/test_watchdog.py`)
+
+- [x] Test `Watchdog` is not tripped initially
+- [x] Test `Watchdog` trips exactly at `failure_threshold` consecutive failures
+- [x] Test `guard()` raises `WatchdogTrippedError` when circuit is open
+- [x] Test `guard()` records success and decrements failure count
+- [x] Test `guard()` propagates exception and records failure
+- [x] Test `reset()` clears all state (failures = 0, tripped = False)
+- [x] Test `record_success()` decrements failure count below threshold
+
+### 10.2 — Chaos Engineering (`tests/test_chaos.py`)
+
+- [x] Test network drop (`APIConnectionError`) retries and recovers
+- [x] Test connection drop with retries exhausted raises `GatekeeperError`
+- [x] Test HTTP 503 (not in `retryable_status_codes`) raises immediately (1 attempt)
+- [x] Test HTTP 502 (configured as retryable) recovers on second attempt
+- [x] Test 7 parametrized malformed JSON payloads raise `ValueError` from `_extract_json()`
+- [x] Test agent propagates `ValueError` on unicode garbage response
+- [x] Test agent recovers with valid response after chaos injection
+- [x] Test agent retries on truncated JSON and succeeds on second attempt
+- [x] Test agent raises `ValueError` after all JSON retries exhausted
+
+### 10.3 — Sensitivity Analysis (`tests/test_sensitivity.py`)
+
+- [x] Test `SensitivityConfig` default fields are non-empty
+- [x] Test `SensitivityConfig` accepts custom temperatures and `runs_per_config`
+- [x] Test `SensitivityResult` stores all fields correctly
+- [x] Test `_count_truncations()` returns 0 for short debates (rounds ≤ LEDGER_WINDOW)
+- [x] Test `_count_truncations()` returns positive for long debates
+- [x] Test `_count_truncations()` grows monotonically with rounds
+- [x] Test `SensitivityRunner.run()` result count equals `|temperatures| × |max_rounds_values|`
+- [x] Test `SensitivityRunner.run()` covers full Cartesian product
+- [x] Test all `SensitivityResult.mean_tokens` values are non-negative
+- [x] Test `tiebreaker_count` is 1 when `verdict.tiebreaker_used` is set; 0 otherwise
+- [x] Test runner uses default `SensitivityConfig` when none provided
+- [x] Test `run_count` matches `runs_per_config` setting
+- [x] Test truncation count reflects debate length (long > short)
+
+### Phase 10 Gate
+
+```bash
+uv run pytest tests/test_chaos.py tests/test_sensitivity.py tests/test_watchdog.py -v
+uv run ruff check .
+find src tests -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS"}'
+# Verify Watchdog is exported from gatekeeper __init__
+python -c "from src.debate.gatekeeper import Watchdog, WatchdogTrippedError; print('PASS')"
+```
+
+---
+
 ## Hard Constraints (never skip)
 
 | Check | Command |
