@@ -335,6 +335,8 @@ A benchmark of 5 full debates (10 rounds each) was run against the thesis config
 
 ![Cache Efficiency](assets/cache_efficiency.png)
 
+> **Note — Why cache efficiency is 0%:** The zero cache-hit rate shown above is an expected architectural behaviour, not a bug. Anthropic's Prompt Caching requires two conditions to be met simultaneously: (1) the cached prefix must be **byte-identical** across calls, and (2) each message block that should be cached must carry an explicit `cache_control` header. This system triggers **Prefix Busting** on both fronts: every debate round prepends a fresh timestamp and a new UUID to the message sequence, and the tool-use array (which lists available search tools) changes order between agents — both of which invalidate the prefix before the cache can activate. Resolving this would require pinning a static, header-marked system-prompt block before any dynamic content and ensuring all variable data (timestamps, IDs, tool lists) is appended *after* the cached segment rather than prepended before it.
+
 ### Latency per Round
 
 ![Latency per Round](assets/latency_per_round.png)
