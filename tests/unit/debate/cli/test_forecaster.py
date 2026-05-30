@@ -41,7 +41,7 @@ def test_confirm_benchmark_returns_true_on_y() -> None:
         assert confirm_benchmark(n_runs=1, max_rounds=3) is True
 
 
-def test_confirm_benchmark_returns_true_on_uppercase_Y() -> None:
+def test_confirm_benchmark_returns_true_on_capital_y() -> None:
     with patch("builtins.input", return_value="Y"):
         assert confirm_benchmark(n_runs=1, max_rounds=3) is True
 
@@ -51,7 +51,7 @@ def test_confirm_benchmark_returns_false_on_n() -> None:
         assert confirm_benchmark(n_runs=1, max_rounds=3) is False
 
 
-def test_confirm_benchmark_returns_false_on_uppercase_N() -> None:
+def test_confirm_benchmark_returns_false_on_capital_n() -> None:
     with patch("builtins.input", return_value="N"):
         assert confirm_benchmark(n_runs=1, max_rounds=3) is False
 

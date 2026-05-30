@@ -1,0 +1,31 @@
+{
+  "project": {
+    "name": "Deterministic AI Debate System",
+    "version": "1.0.0",
+    "description": "Multi-agent deterministic debate with structured evaluation and benchmarking"
+  },
+  "debate": {
+    "default_topic": "Will AI replace software engineers?",
+    "stances": ["PRO", "CON"],
+    "default_max_rounds": 10,
+    "default_benchmark_runs": 5
+  },
+  "evaluation": {
+    "tiebreaker_levels": [
+      "responsiveness",
+      "evidence_quality",
+      "v1_faithfulness",
+      "prng"
+    ],
+    "scoring": {
+      "recency_decay_lambda": 0.3,
+      "v1_distance_threshold": 0.4,
+      "centroid_alignment_threshold": 0.7
+    }
+  },
+  "output": {
+    "benchmark_json": "debate_systems_research.json",
+    "assets_dir": "assets/",
+    "log_dir": "logs/"
+  }
+}

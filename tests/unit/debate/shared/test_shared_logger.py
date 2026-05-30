@@ -104,7 +104,7 @@ def test_watchdog_has_shared_logger() -> None:
 
 def test_logger_no_literals_in_source() -> None:
     """logger.py must not contain hardcoded _MAX_BYTES or _BACKUP_COUNT constants."""
-    src = (Path(__file__).parents[1] / "src" / "debate" / "shared" / "logger.py").read_text()
+    src = (Path(__file__).parents[4] / "src" / "debate" / "shared" / "logger.py").read_text()
     for forbidden in ("_MAX_BYTES", "_BACKUP_COUNT", "50_000"):
         assert forbidden not in src, (
             f"Hardcoded literal '{forbidden}' found in logger.py — Rule 8 violation"

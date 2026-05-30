@@ -103,7 +103,7 @@ def test_sdk_public_api_is_complete() -> None:
 
 def test_main_has_no_internal_imports() -> None:
     """main.py must route exclusively through DebateSDK — no direct submodule imports."""
-    main_src = (Path(__file__).parents[1] / "main.py").read_text()
+    main_src = (Path(__file__).parents[4] / "main.py").read_text()
     for forbidden in ("pipeline", "BenchmarkReporter", "run_benchmarks", "reporter"):
         assert forbidden not in main_src, (
             f"main.py imports '{forbidden}' directly — must route through DebateSDK"
