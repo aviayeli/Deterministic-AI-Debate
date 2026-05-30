@@ -1,3 +1,4 @@
+"""Benchmark reporter: exports debate results to a structured JSON file with per-run and aggregate statistics."""
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -7,6 +8,7 @@ from ..engine.pipeline import DebateResult
 
 
 class BenchmarkReporter:
+    """Serialises a list of DebateResult objects into a timestamped JSON file with benchmark_metadata, runs, and aggregates keys."""
     @staticmethod
     def export(results: list[DebateResult], path: Path | str) -> None:
         path = Path(path)

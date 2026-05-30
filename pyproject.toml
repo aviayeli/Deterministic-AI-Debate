@@ -29,11 +29,9 @@ dependencies = [
     "numpy>=1.26.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.0.0",
-    "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
     "requests>=2.34.2",
     "rich>=13.0.0",
-    "ruff>=0.15.13",
     "sentence-transformers>=3.0.0",
     "matplotlib>=3.8.0",
     "seaborn>=0.13.0",
@@ -63,7 +61,13 @@ line-length = 88
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [dependency-groups]
 dev = [
+    "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "ruff>=0.15.13",
 ]

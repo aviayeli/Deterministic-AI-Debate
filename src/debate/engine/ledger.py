@@ -1,9 +1,11 @@
+"""Ledger manager for serialising and querying debate history entries."""
 import json
 
 from ..schemas.round import LedgerEntry
 
 
 class LedgerManager:
+    """Manages a sequence of LedgerEntry records, providing windowed access, LLM serialisation, and weighted decay computation."""
     def __init__(self, entries: list[LedgerEntry]) -> None:
         self._entries = entries
 

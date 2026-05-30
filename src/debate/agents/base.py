@@ -1,3 +1,4 @@
+"""Abstract base class shared by PRO and CON debate agents."""
 import json
 import re
 from abc import ABC, abstractmethod
@@ -12,6 +13,8 @@ _JSON_PARSE_RETRIES = 3
 
 
 class BaseAgent(ABC):
+    """Abstract debate agent managing the ledger, V₁ embedding immutability, and JSON-retry LLM calls."""
+
     def __init__(self) -> None:
         self.v1_embedding: list[float] | None = None
         self._ledger: list[LedgerEntry] = []

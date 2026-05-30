@@ -1,3 +1,4 @@
+"""FIFO-queue-backed API Gatekeeper with token-bucket rate limiting, retry, and circuit-breaker protection."""
 import queue
 import random
 import threading
@@ -14,18 +15,25 @@ _logger = get_logger("gatekeeper")
 
 
 class GatekeeperError(Exception):
-    pass
+    """Base exception for all ApiGatekeeper failures."""
 
 
 class GatekeeperTimeoutError(GatekeeperError):
-    pass
+    """Raised when all retry attempts are exhausted due to API timeout."""
 
 
 class GatekeeperRateLimitError(GatekeeperError):
-    pass
+    """Raised when all retry attempts are exhausted due to upstream rate limiting (HTTP 429)."""
 
 
 class ApiGatekeeper:
+    """Rate-limiting proxy for Anthropic API calls.
+
+    Enforces a configurable requests-per-minute ceiling via a token-bucket
+    algorithm, serialises concurrent callers through a FIFO queue, retries
+    transient failures with exponential backoff, and trips a Watchdog
+    circuit-breaker after repeated consecutive failures.
+    """
     def __init__(self, client: anthropic.Anthropic, config: GatekeeperConfig) -> None:
         self._client = client
         self._config = config

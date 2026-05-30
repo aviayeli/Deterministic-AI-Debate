@@ -1,3 +1,4 @@
+"""Debate execution pipeline: single-debate orchestration and multithreaded benchmark runner."""
 import sys
 import time
 import uuid

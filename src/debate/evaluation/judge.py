@@ -1,3 +1,4 @@
+"""Judge module: evaluates debate rounds and resolves verdicts with a 4-level deterministic tiebreaker."""
 import hashlib
 import random
 from typing import Any
@@ -33,6 +34,8 @@ def _v1_distance(agent: Any) -> float:
 
 
 class Judge:
+    """Evaluates a completed debate and produces a deterministic VerdictSchema via a 4-level tiebreaker: responsiveness → evidence quality → V₁ faithfulness → PRNG."""
+
     def evaluate_debate(
         self,
         rounds: list[RoundSchema],

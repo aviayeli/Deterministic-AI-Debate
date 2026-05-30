@@ -1,3 +1,4 @@
+"""CON debate agent — argues that AI will NOT replace software engineers."""
 from typing import Any
 
 from ..config import settings
@@ -25,6 +26,8 @@ _SUFFIX = (
 
 
 class ConAgent(BaseAgent):
+    """Debate agent taking the CON stance, driven by settings-controlled prompts and gatekeeper-routed LLM calls."""
+
     def __init__(
         self, gatekeeper: ApiGatekeeper, topic: str | None = None,
         search_tool: Any = None, extra_instructions: str = "", fact_checker: Any = None,

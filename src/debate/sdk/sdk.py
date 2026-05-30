@@ -28,6 +28,13 @@ def _load_default_topic() -> str:
 
 
 class DebateSDK:
+    """Public facade for the Deterministic AI Debate system.
+
+    Orchestrates topic selection, single-debate execution, multithreaded
+    benchmarking, result export, and analysis graph generation through a
+    single stable entry point.
+    """
+
     def __init__(self, topic: str | None = None) -> None:
         self._topic: str = topic if topic is not None else _load_default_topic()
         client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
