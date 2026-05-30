@@ -476,6 +476,262 @@ python -c "from src.debate.gatekeeper import Watchdog, WatchdogTrippedError; pri
 
 ---
 
+---
+
+## Phase 14: V3 Excellence Upgrades (הצטיינות יתרה)
+
+**Goal**: Meet Dr. Segal's V3 "Excellence" submission guidelines across five surgical
+upgrade areas. Each sub-phase follows the standard TDD-first workflow.
+
+---
+
+### Phase 14-A: FIFO Queue Backpressure in ApiGatekeeper
+
+**Goal**: Replace the sleep-based token-bucket block in `ApiGatekeeper.call()` with a
+`queue.Queue`-based FIFO backpressure mechanism. Callers enqueue their request futures;
+a dedicated drain loop dequeues and fires them as tokens become available. This guarantees
+strict call ordering and eliminates busy-wait sleep loops under rate-limit pressure.
+
+**Reference**: `docs/PRD_gatekeeper.md` (update §2 to document the queue design)
+
+#### 14-A.1 — Tests First (`tests/test_gatekeeper_queue.py`)
+
+- [x] Test that two concurrent `call()` invocations are served in FIFO order (first
+  enqueued → first responded)
+- [x] Test that when the token bucket is empty, `call()` blocks the caller (does not
+  raise) and completes once tokens replenish
+- [x] Test that `qsize()` on the internal queue reaches 0 after all pending calls complete
+- [x] Test that a `GatekeeperTimeoutError` is still raised when the underlying SDK times
+  out (queue does not swallow it)
+- [x] Test that `GatekeeperRateLimitError` is still raised after exhausted retries even
+  when queued
+- [x] Test that the FIFO queue processes at most `requests_per_minute / 60` tokens per
+  second (rate contract is preserved)
+- [x] Test thread-safety: 8 concurrent threads each submitting 3 calls all complete
+  without deadlock (timeout = 10 s)
+
+#### 14-A.2 — Implementation
+
+- [x] `src/debate/gatekeeper/gatekeeper.py` — replace `time.sleep()` token-wait with
+  `queue.Queue` drain loop; keep `≤ 150` lines
+- [x] `src/debate/gatekeeper/__init__.py` — no public API changes required
+- [x] `config/rate_limits.json` — add `"queue_maxsize": 100` field (0 = unbounded)
+
+#### 14-A Gate
+
+```bash
+uv run pytest tests/test_gatekeeper_queue.py tests/test_gatekeeper.py -v
+uv run ruff check .
+wc -l src/debate/gatekeeper/gatekeeper.py   # must be ≤ 150
+grep -n "time.sleep" src/debate/gatekeeper/gatekeeper.py && echo "FAIL: sleep remains" || echo "PASS: queue-based"
+```
+
+---
+
+### Phase 14-B: Pure SDK Architecture
+
+**Goal**: `main.py` must be a thin CLI wrapper (≤ 20 lines) that imports and calls only
+`DebateSDK`. All business logic (benchmark execution, export, analysis) routes exclusively
+through `src/debate/sdk/sdk.py`. The SDK module must move from the flat `src/debate/sdk.py`
+to the proper subpackage path `src/debate/sdk/sdk.py` so the public import becomes
+`from debate.sdk.sdk import DebateSDK`.
+
+**Audit finding**: `main.py` currently imports `run_benchmarks` and `BenchmarkReporter`
+directly, bypassing the SDK layer entirely.
+
+#### 14-B.1 — Tests First
+
+All existing tests in `tests/test_sdk.py` serve as the regression suite and must remain
+green throughout. Add the following new cases to `tests/test_sdk.py`:
+
+- [x] Test `main.py` has no import of `pipeline`, `reporter`, or any internal submodule
+  (`grep` assertion in test)
+- [x] Test `DebateSDK.run_benchmark()` passes `max_rounds` through to `run_benchmarks()`
+  (regression — currently `sdk.run_benchmark` does not forward `max_rounds` to
+  `run_benchmarks`)
+
+#### 14-B.2 — Implementation
+
+- [x] Create `src/debate/sdk/__init__.py` — re-exports `DebateSDK` with `__all__`
+- [x] Move `src/debate/sdk.py` → `src/debate/sdk/sdk.py` (no logic changes, path only)
+- [x] Update `src/debate/__init__.py` — change import path to
+  `from .sdk.sdk import DebateSDK`
+- [x] `main.py` — replace all direct submodule imports with a single `DebateSDK` call
+  (stays ≤ 20 lines)
+- [x] Update all `from debate.sdk import` references across `src/` and `tests/` to the
+  new path
+
+#### 14-B Gate
+
+```bash
+uv run pytest tests/test_sdk.py -v
+uv run ruff check .
+wc -l main.py   # must be ≤ 20
+# No direct internal imports in main.py
+grep -E "pipeline|reporter|run_benchmarks|BenchmarkReporter" main.py && echo "FAIL" || echo "PASS"
+# SDK subpackage importable
+python -c "from debate.sdk.sdk import DebateSDK; print('PASS')"
+```
+
+---
+
+### Phase 14-C: Sub-PRDs for Core Mechanisms
+
+**Goal**: Every significant architectural mechanism must have its own dedicated PRD
+document under `docs/`. This ensures each subsystem's contract is self-contained and
+reviewable without reading the monolithic `docs/PRD.md`.
+
+**Audit finding**: `docs/PRD_watchdog.md` does not exist. `docs/PRD_gatekeeper.md`
+exists but predates the FIFO queue design added in Phase 14-A and must be updated.
+
+#### 14-C.1 — Documentation Tasks
+
+- [x] Create `docs/PRD_watchdog.md` — document `Watchdog` circuit-breaker contract:
+  - §1 Purpose and failure-isolation guarantee
+  - §2 State machine: `CLOSED → OPEN` at `failure_threshold`; manual `reset()` path
+  - §3 `guard()` protocol: propagates exceptions, records failure, raises
+    `WatchdogTrippedError` when open
+  - §4 Integration with `ApiGatekeeper` (shared failure accounting)
+  - §5 Hyperparameters: `failure_threshold` (sourced from `config/rate_limits.json`)
+  - §6 Test contract: references `tests/test_watchdog.py`
+- [x] Update `docs/PRD_gatekeeper.md` §2 — add FIFO queue design section describing
+  `queue.Queue` drain loop, `queue_maxsize` config field, ordering guarantee, and
+  removal of busy-wait sleep
+
+#### 14-C Gate
+
+```bash
+# Both files exist
+ls docs/PRD_watchdog.md && echo "PASS: watchdog PRD exists"
+# FIFO queue section present in gatekeeper PRD
+grep -i "fifo\|queue" docs/PRD_gatekeeper.md && echo "PASS: queue section present" || echo "FAIL"
+# Watchdog PRD references the test file
+grep "test_watchdog" docs/PRD_watchdog.md && echo "PASS" || echo "FAIL"
+```
+
+---
+
+### Phase 14-D: FIFO Logger Compliance Audit
+
+**Goal**: Verify that `shared/logger.py` is strictly compliant with the V3 logging spec:
+exactly 20 backup files (`backupCount=20`) and a maximum of 500 lines per file
+(`maxBytes=50_000` at 100 bytes/line average). Resolve the Rule 8 violation: `_MAX_BYTES`
+and `_BACKUP_COUNT` are currently hardcoded magic numbers in `logger.py` and must be
+sourced from `config/logging_config.json`.
+
+**Audit finding**: `shared/logger.py` lines 9-10 hardcode `_MAX_BYTES = 50_000` and
+`_BACKUP_COUNT = 20` directly in the Python file — a Rule 8 violation.
+
+#### 14-D.1 — Tests First (additions to `tests/test_shared_logger.py`)
+
+- [x] Test `_MAX_BYTES` and `_BACKUP_COUNT` are NOT present as literals in
+  `shared/logger.py` source (`grep` assertion in test)
+- [x] Test `get_logger()` reads `max_bytes` from `config/logging_config.json` and uses
+  that value as `RotatingFileHandler.maxBytes`
+- [x] Test `get_logger()` reads `backup_count` from `config/logging_config.json` and
+  uses that value as `RotatingFileHandler.backupCount`
+- [x] Test that modifying `config/logging_config.json` to `backup_count=5` and
+  reinstantiating yields a handler with `backupCount == 5` (config is truly live)
+
+#### 14-D.2 — Implementation
+
+- [x] `config/logging_config.json` — add `"max_bytes": 50000` and `"backup_count": 20`
+  fields (alongside existing fields if any)
+- [x] `src/debate/shared/logger.py` — remove `_MAX_BYTES` and `_BACKUP_COUNT` constants;
+  load values from `config/logging_config.json` at import time via `json.loads()`
+  (stays ≤ 50 lines)
+
+#### 14-D Gate
+
+```bash
+uv run pytest tests/test_shared_logger.py -v
+uv run ruff check .
+# No hardcoded byte/count literals in logger
+grep -n "50_000\|50000\|_MAX_BYTES\s*=\|_BACKUP_COUNT\s*=" src/debate/shared/logger.py \
+  && echo "FAIL: hardcoded value" || echo "PASS: config-driven"
+wc -l src/debate/shared/logger.py   # must be ≤ 50
+```
+
+---
+
+### Phase 14-E: CLAUDE.md 12-Rule Agentic Framework Upgrade
+
+**Goal**: Expand `CLAUDE.md` from the current 9-rule contract to a 12-rule agentic
+framework by adding three new rules that govern multi-step, long-running, and
+cost-sensitive execution contexts.
+
+**Audit finding**: `CLAUDE.md` currently defines 4 core rules (Part I) and 5
+project-specific constraints (Part II) — 9 rules total. The V3 Excellence guidelines
+require 12.
+
+#### 14-E.1 — Documentation Tasks
+
+- [x] Add **Rule 10 — Explicit Failure Over Silent Failure** to `CLAUDE.md`:
+  - Every error path must raise a named exception or return a typed error value.
+  - Functions must never swallow exceptions with bare `except: pass` or return `None`
+    as a sentinel for failure.
+  - Applies to all modules in `src/`; violations caught by `ruff` rule `BLE001`.
+- [x] Add **Rule 11 — Checkpoint Summaries for Long Tasks** to `CLAUDE.md`:
+  - Any automated task spanning more than 3 sequential tool calls must emit a one-line
+    progress checkpoint (via `logger.info`) after each logical sub-step.
+  - Checkpoint format: `[PHASE X/N] <description> — done`.
+  - This rule applies to pipeline, benchmarks, and sensitivity runner.
+- [x] Add **Rule 12 — Hard Token Budgets** to `CLAUDE.md`:
+  - Every agent call must specify an explicit `max_tokens` ceiling sourced from
+    `settings.MAX_TOKENS_PER_CALL` (`.env` / `config.py`).
+  - No call may omit `max_tokens` or rely on API defaults.
+  - Enforcement: `grep -rn "gatekeeper.call" src/ | grep -v "max_tokens"` must return
+    0 matches before any commit.
+- [x] Update `CLAUDE.md` header to read "12-Rule Agentic Behavioral Contract" and
+  bump the rule count in the Part II title from 5 to 8 project-specific constraints.
+
+#### 14-E Gate
+
+```bash
+# Exactly 12 numbered rules exist
+grep -c "^### [0-9]\+\." CLAUDE.md
+# New rules present
+grep -q "Explicit Failure" CLAUDE.md && echo "Rule 10 PASS" || echo "Rule 10 FAIL"
+grep -q "Checkpoint Summaries" CLAUDE.md && echo "Rule 11 PASS" || echo "Rule 11 FAIL"
+grep -q "Hard Token Budgets" CLAUDE.md && echo "Rule 12 PASS" || echo "Rule 12 FAIL"
+```
+
+---
+
+### Phase 14 Full Gate
+
+```bash
+# All tests green
+uv run pytest -v --tb=short
+
+# Zero linter errors
+uv run ruff check .
+
+# Coverage ≥ 85%
+uv run pytest --cov=src --cov-report=term-missing | tail -5
+
+# No file ≥ 150 lines
+find src tests -name "*.py" | xargs wc -l | grep -v total | \
+  awk '$1 >= 150 {print "FAIL:", $0; found=1} END {if (!found) print "PASS: all files under 150 lines"}'
+
+# main.py ≤ 20 lines and SDK-only
+wc -l main.py
+grep -E "pipeline|reporter|run_benchmarks|BenchmarkReporter" main.py && echo "FAIL: bypass detected" || echo "PASS"
+
+# Logger config-driven (no magic numbers)
+grep -n "50_000\|_MAX_BYTES\s*=\|_BACKUP_COUNT\s*=" src/debate/shared/logger.py \
+  && echo "FAIL: hardcoded" || echo "PASS: config-driven"
+
+# Sub-PRDs present
+ls docs/PRD_watchdog.md && echo "PRD_watchdog PASS"
+grep -i "fifo\|queue" docs/PRD_gatekeeper.md && echo "PRD_gatekeeper updated PASS"
+
+# 12 rules in CLAUDE.md
+grep -c "^### [0-9]\+\." CLAUDE.md
+```
+
+---
+
 ## Hard Constraints (never skip)
 
 | Check | Command |

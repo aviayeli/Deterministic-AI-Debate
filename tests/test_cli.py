@@ -127,9 +127,9 @@ def test_main_interactive_flag_triggers_run_loop() -> None:
     with (
         patch("sys.argv", ["main", "--interactive"]),
         patch("src.debate.cli.menu.run_loop") as mock_loop,
-        patch("src.debate.sdk.anthropic.Anthropic"),
-        patch("src.debate.sdk.ApiGatekeeper"),
-        patch("src.debate.sdk.GatekeeperConfig.load"),
+        patch("src.debate.sdk.sdk.anthropic.Anthropic"),
+        patch("src.debate.sdk.sdk.ApiGatekeeper"),
+        patch("src.debate.sdk.sdk.GatekeeperConfig.load"),
     ):
         from main import main
         main()
@@ -137,11 +137,12 @@ def test_main_interactive_flag_triggers_run_loop() -> None:
 
 
 def test_main_without_interactive_uses_benchmarks() -> None:
+    mock_sdk = MagicMock()
+    mock_sdk.run_benchmark.return_value = []
     with (
         patch("sys.argv", ["main", "--runs", "1", "--rounds", "3"]),
-        patch("main.run_benchmarks", return_value=[]) as mock_bench,
-        patch("main.BenchmarkReporter"),
+        patch("main.DebateSDK", return_value=mock_sdk),
     ):
         from main import main
         main()
-    mock_bench.assert_called_once_with(n=1, max_rounds=3)
+    mock_sdk.run_benchmark.assert_called_once_with(n=1, max_rounds=3)

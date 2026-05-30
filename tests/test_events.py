@@ -13,7 +13,7 @@ from src.debate.events.types import DebateStartEvent
 from src.debate.schemas.claim import ClaimPayloadSchema
 from src.debate.schemas.round import LedgerEntry
 
-_SDK = "src.debate.sdk"
+_SDK = "src.debate.sdk.sdk"
 _ANTH = f"{_SDK}.anthropic.Anthropic"
 _GK = f"{_SDK}.ApiGatekeeper"
 _GK_CFG = f"{_SDK}.GatekeeperConfig.load"

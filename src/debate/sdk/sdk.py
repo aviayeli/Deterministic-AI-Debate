@@ -6,17 +6,17 @@ from typing import Any
 
 import anthropic
 
-from . import analysis
-from .agents.con import ConAgent
-from .agents.pro import ProAgent
-from .benchmarks.reporter import BenchmarkReporter
-from .config import settings
-from .engine.pipeline import DebateResult, run_benchmarks, run_debate
-from .events.bus import EventBus
-from .gatekeeper import ApiGatekeeper
-from .gatekeeper.config import GatekeeperConfig
+from .. import analysis
+from ..agents.con import ConAgent
+from ..agents.pro import ProAgent
+from ..benchmarks.reporter import BenchmarkReporter
+from ..config import settings
+from ..engine.pipeline import DebateResult, run_benchmarks, run_debate
+from ..events.bus import EventBus
+from ..gatekeeper import ApiGatekeeper
+from ..gatekeeper.config import GatekeeperConfig
 
-_TOPICS_CONFIG = Path(__file__).parents[2] / "config" / "topics.json"
+_TOPICS_CONFIG = Path(__file__).parents[3] / "config" / "topics.json"
 
 
 def _load_default_topic() -> str:

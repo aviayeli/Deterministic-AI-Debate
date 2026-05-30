@@ -1,7 +1,7 @@
 import json
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +20,8 @@ class LoggingConfig:
     @classmethod
     def load(cls) -> "LoggingConfig":
         data = json.loads(_CONFIG_PATH.read_text())
-        return cls(**data)
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
 
 
 _config: LoggingConfig | None = None

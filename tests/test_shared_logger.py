@@ -1,6 +1,7 @@
 """Phase 13 — Shared RotatingFileHandler logger and v1.0.0 versioning."""
 from __future__ import annotations
 
+import json
 import logging
 import logging.handlers
 from pathlib import Path
@@ -96,3 +97,44 @@ def test_watchdog_has_shared_logger() -> None:
     import src.debate.gatekeeper.watchdog as wd_mod
 
     assert isinstance(wd_mod._logger, logging.Logger)
+
+
+# ── Phase 14-D: Rule 8 compliance tests ──────────────────────────────────────
+
+
+def test_logger_no_literals_in_source() -> None:
+    """logger.py must not contain hardcoded _MAX_BYTES or _BACKUP_COUNT constants."""
+    src = (Path(__file__).parents[1] / "src" / "debate" / "shared" / "logger.py").read_text()
+    for forbidden in ("_MAX_BYTES", "_BACKUP_COUNT", "50_000"):
+        assert forbidden not in src, (
+            f"Hardcoded literal '{forbidden}' found in logger.py — Rule 8 violation"
+        )
+
+
+def test_get_logger_reads_max_bytes_from_config(tmp_path: Path) -> None:
+    """get_logger() must use max_bytes from the config file, not a literal."""
+    cfg = tmp_path / "logging_config.json"
+    cfg.write_text(json.dumps({"max_bytes": 25000, "backup_count": 5}))
+    logger = get_logger("mb_cfg", log_dir=tmp_path / "logs", config_path=cfg)
+    rfh = next(h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler))
+    assert rfh.maxBytes == 25000, f"Expected 25000, got {rfh.maxBytes}"
+
+
+def test_get_logger_reads_backup_count_from_config(tmp_path: Path) -> None:
+    """get_logger() must use backup_count from the config file, not a literal."""
+    cfg = tmp_path / "logging_config.json"
+    cfg.write_text(json.dumps({"max_bytes": 50000, "backup_count": 7}))
+    logger = get_logger("bc_cfg", log_dir=tmp_path / "logs", config_path=cfg)
+    rfh = next(h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler))
+    assert rfh.backupCount == 7, f"Expected 7, got {rfh.backupCount}"
+
+
+def test_config_change_affects_new_logger_instance(tmp_path: Path) -> None:
+    """A config with backup_count=5 must yield backupCount=5, not the module default."""
+    cfg = tmp_path / "logging_config.json"
+    cfg.write_text(json.dumps({"max_bytes": 50000, "backup_count": 5}))
+    logger = get_logger("liveconf", log_dir=tmp_path / "logs", config_path=cfg)
+    rfh = next(h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler))
+    assert rfh.backupCount == 5, (
+        f"Expected 5 (from config), got {rfh.backupCount} — config not live"
+    )

@@ -1,6 +1,6 @@
-# CLAUDE.md — Behavioral Contract for AI-Assisted Development
+# CLAUDE.md — 12-Rule Agentic Behavioral Contract
 
-This file governs how Claude (and any AI assistant) must behave when working in this repository. All rules below are enforced during every session. Non-compliance invalidates the architectural guarantees described in `docs/PRD.md`.
+This file governs how Claude (and any AI assistant) must behave when working in this repository. All 12 rules below are enforced during every session. Non-compliance invalidates the architectural guarantees described in `docs/PRD.md`.
 
 ---
 
@@ -20,7 +20,7 @@ Every action must trace back to a specific task in `docs/TODO.md` or an explicit
 
 ---
 
-## Part II: Project-Specific Constraints
+## Part II: Project-Specific Constraints (8 Rules)
 
 ### 5. All API Calls Must Route Through `ApiGatekeeper`
 No agent or module may call `client.messages.create()` directly. Every Anthropic API call must go through `gatekeeper.call()` as implemented in `src/debate/agents/base.py`. This enforces rate limiting, retry with exponential backoff, and circuit-breaker protection.
@@ -69,15 +69,85 @@ max_rounds = settings.MAX_ROUNDS
 ### 9. LEDGER_WINDOW Context Truncation Protocol
 Agents must never pass full conversation history to the LLM. Context sent per round is strictly bounded to the last `settings.LEDGER_WINDOW` entries from the opponent's ledger, retrieved via `agent.get_windowed_ledger(settings.LEDGER_WINDOW)` as implemented in `src/debate/engine/pipeline.py`. This prevents O(n²) token growth across rounds and keeps costs deterministic. Do not increase or bypass this window without updating `docs/PRD.md` and adding a sensitivity test.
 
+### 10. Explicit Failure Over Silent Failure
+Every error path must raise a named exception or return a typed error value. Functions must never swallow exceptions or use `None` as a silent sentinel for failure.
+
+**Violation patterns to avoid:**
+```python
+# FORBIDDEN — bare swallow
+try:
+    result = risky_call()
+except Exception:
+    pass  # silent failure
+
+# FORBIDDEN — None-as-failure
+def get_data() -> dict | None:
+    try:
+        return fetch()
+    except Exception:
+        return None  # caller cannot distinguish "not found" from "error"
+```
+
+**Required pattern:**
+```python
+# CORRECT — named exception propagates to the caller
+try:
+    result = risky_call()
+except NetworkError as exc:
+    raise GatekeeperError("upstream unavailable") from exc
+```
+
+Enforcement: `ruff` rule `BLE001` (blind exception catch) must report 0 violations. All `except Exception` blocks in `src/` must either re-raise or raise a named domain exception.
+
+### 11. Checkpoint Summaries for Long-Running Tasks
+Any automated operation spanning more than 3 sequential steps must emit a one-line structured progress checkpoint via `logger.info()` after each logical sub-step. This ensures that long benchmark runs and sensitivity sweeps remain observable without requiring interactive inspection.
+
+**Required checkpoint format:**
+```python
+logger.info("[PHASE %d/%d] %s — done", current, total, description)
+```
+
+This rule applies to: `src/debate/engine/pipeline.py` (each debate round), `run_benchmarks()` (each completed run), and `src/debate/sensitivity_runner.py` (each config combination). Suppressing or removing checkpoints to reduce log volume is a contract violation — use log-level filtering instead.
+
+### 12. Hard Token Budgets on Every Agent Call
+Every call routed through `ApiGatekeeper` must supply an explicit `max_tokens` ceiling. Omitting `max_tokens` and relying on Anthropic API defaults is forbidden: defaults change across model versions and can silently inflate costs.
+
+**Violation pattern to avoid:**
+```python
+# FORBIDDEN — relies on API default
+gatekeeper.call(model=settings.MODEL, messages=messages)
+```
+
+**Required pattern:**
+```python
+# CORRECT — explicit ceiling from settings
+gatekeeper.call(
+    model=settings.MODEL,
+    max_tokens=settings.MAX_TOKENS_PER_CALL,
+    messages=messages,
+)
+```
+
+Pre-commit enforcement:
+```bash
+grep -rn "gatekeeper.call" src/ | grep -v "max_tokens" && echo "FAIL: missing max_tokens" || echo "PASS"
+```
+
 ---
 
 ## Enforcement
 
 Before any commit:
 ```bash
-uv run ruff check .          # must exit 0
+uv run ruff check .          # must exit 0 (includes BLE001 for Rule 10)
 uv run pytest --cov=src      # must exit 0, coverage must not decrease
-wc -l src/debate/**/*.py     # no file may exceed 150 lines
+wc -l src/debate/**/*.py     # no file may exceed 150 lines (Rule 6)
+
+# Rule 12: every gatekeeper.call() must declare max_tokens
+grep -rn "gatekeeper.call" src/ | grep -v "max_tokens" && echo "FAIL" || echo "PASS"
+
+# Verify 12 rules present
+grep -c "^### [0-9]" CLAUDE.md  # must output 12
 ```
 
 These gates are also enforced by GitHub Actions CI on every push.

@@ -1,8 +1,6 @@
 import argparse
 
-from src.debate.benchmarks.reporter import BenchmarkReporter
-from src.debate.engine.pipeline import run_benchmarks
-from src.debate.logging import get_logger
+from src.debate.sdk import DebateSDK
 
 
 def main() -> None:
@@ -14,7 +12,9 @@ def main() -> None:
         from src.debate.cli.menu import run_loop
         run_loop()
         return
-    BenchmarkReporter.export(run_benchmarks(n=args.runs, max_rounds=args.rounds), "debate_systems_research.json")
-    get_logger("main").info(f"Done: {args.runs} x {args.rounds} rounds")
+    sdk = DebateSDK()
+    sdk.export(sdk.run_benchmark(n=args.runs, max_rounds=args.rounds), "debate_systems_research.json")
+
+
 if __name__ == "__main__":
     main()

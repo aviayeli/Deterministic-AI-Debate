@@ -2,7 +2,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-_SDK = "src.debate.sdk"
+_SDK = "src.debate.sdk.sdk"
 _ANTH = f"{_SDK}.anthropic.Anthropic"
 _GK = f"{_SDK}.ApiGatekeeper"
 _GK_CFG = f"{_SDK}.GatekeeperConfig.load"
@@ -99,3 +99,24 @@ def test_sdk_public_api_is_complete() -> None:
     sdk = _make_sdk()
     for method in ("run_single", "run_benchmark", "export", "generate_analysis", "set_topic"):
         assert callable(getattr(sdk, method)), f"SDK missing method: {method}"
+
+
+def test_main_has_no_internal_imports() -> None:
+    """main.py must route exclusively through DebateSDK — no direct submodule imports."""
+    main_src = (Path(__file__).parents[1] / "main.py").read_text()
+    for forbidden in ("pipeline", "BenchmarkReporter", "run_benchmarks", "reporter"):
+        assert forbidden not in main_src, (
+            f"main.py imports '{forbidden}' directly — must route through DebateSDK"
+        )
+
+
+def test_run_benchmark_passes_max_rounds() -> None:
+    """DebateSDK.run_benchmark(n, max_rounds) must forward max_rounds to run_benchmarks()."""
+    with (
+        patch(_ANTH), patch(_GK), patch(_GK_CFG),
+        patch(_RUN_BENCH, return_value=[]) as mock_rb,
+    ):
+        from src.debate.sdk import DebateSDK
+        DebateSDK().run_benchmark(n=2, max_rounds=5)
+    _, kw = mock_rb.call_args
+    assert kw.get("max_rounds") == 5, "max_rounds not forwarded to run_benchmarks()"

@@ -36,14 +36,31 @@ a hard ceiling over any sliding 60-second window.
 timestamps; a token bucket needs only a float and a lock — simpler, thread-safe, and
 sufficient for our sequential-within-debate, concurrent-across-benchmarks access pattern.
 
-### 3.2 Queue
+### 3.2 FIFO Queue (Phase 14-A)
 
-- A `threading.Lock` serializes token acquisition; the gatekeeper does **not** add a
-  separate `queue.Queue` because the debate pipeline already serializes calls within a
-  single debate (PRO then CON per round). The lock is sufficient to protect concurrent
-  benchmark runs from racing on the bucket.
-- If the bucket is empty, `_acquire_token()` blocks (sleeps) until the next token
-  is available. The sleep duration is `60 / requests_per_minute` seconds.
+Instead of blocking the calling thread with a busy-wait sleep, `ApiGatekeeper` uses a
+`queue.Queue`-based drain loop to enforce **strict FIFO ordering** under concurrent load:
+
+- At construction, a daemon thread (`_drain_loop`) is started. It blocks on
+  `self._queue.get()` waiting for work.
+- Each `call()` invocation (and each retry attempt within it) creates a
+  `threading.Event`, puts it into `self._queue`, then blocks on `event.wait()`.
+- The drain loop dequeues events **in arrival order** (FIFO), calls `_acquire_token()`
+  to claim a token (sleeping if the bucket is empty), then sets the event to release
+  the waiting caller.
+- `queue_maxsize` (from `config/rate_limits.json`) bounds the internal queue. Setting
+  `0` makes the queue unbounded.
+
+**Ordering guarantee:** `queue.Queue` is FIFO by contract; the first caller to
+`queue.put()` will have its event serviced before any later caller's event.
+
+**Backpressure:** callers block on `event.wait()` rather than spinning or failing. The
+queue provides natural backpressure — if the drain loop falls behind, callers queue up
+and wait rather than piling retries on top of each other.
+
+**Config field added:** `config/rate_limits.json` now includes `"queue_maxsize": 100`.
+
+See `tests/test_gatekeeper_queue.py` for the full contract (7 tests).
 
 ---
 
@@ -64,6 +81,9 @@ failure — it is eligible for retry (see §5).
 - `timeout_seconds` is loaded from `config/rate_limits.json`; it applies to every call.
 - If all retries are exhausted on a timeout, `GatekeeperTimeoutError` is re-raised,
   propagating to the pipeline and aborting that debate run cleanly.
+- Every API call is additionally wrapped by `self._watchdog.guard()`. If the watchdog
+  trips (≥ 3 consecutive failures), it raises `WatchdogTrippedError` before the SDK is
+  called — see `docs/PRD_watchdog.md` for the full circuit-breaker contract.
 
 ---
 
@@ -135,4 +155,6 @@ No other agent code changes are required.
 
 - Persistent request logging to disk (handled by `DebateLogger`)
 - Adaptive rate limiting based on response headers (future work)
-- Circuit-breaker pattern (overkill for single-process debate runs)
+
+> **Note:** The circuit-breaker pattern is **in scope** and implemented via `Watchdog`
+> (see `docs/PRD_watchdog.md`). It is not repeated here to avoid duplication.

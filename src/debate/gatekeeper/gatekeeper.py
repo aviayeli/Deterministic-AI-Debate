@@ -1,3 +1,4 @@
+import queue
 import random
 import threading
 import time
@@ -33,6 +34,8 @@ class ApiGatekeeper:
         self._last_refill: float = time.monotonic()
         self._refill_interval: float = 60.0 / config.requests_per_minute
         self._watchdog = Watchdog()
+        self._queue: queue.Queue[threading.Event] = queue.Queue(maxsize=config.queue_maxsize)
+        threading.Thread(target=self._drain_loop, daemon=True).start()
 
     def _acquire_token(self) -> None:
         while True:
@@ -50,6 +53,12 @@ class ApiGatekeeper:
                 sleep_time = (1.0 - self._tokens) * self._refill_interval
             time.sleep(sleep_time)
 
+    def _drain_loop(self) -> None:
+        while True:
+            event = self._queue.get()
+            self._acquire_token()
+            event.set()
+
     def _is_retryable(self, exc: Exception) -> bool:
         if isinstance(exc, (anthropic.APITimeoutError, anthropic.APIConnectionError)):
             return True
@@ -63,7 +72,9 @@ class ApiGatekeeper:
         kwargs.setdefault("timeout", self._config.timeout_seconds)
         last_exc: Exception | None = None
         for attempt in range(self._config.max_retries + 1):
-            self._acquire_token()
+            grant = threading.Event()
+            self._queue.put(grant)
+            grant.wait()
             try:
                 return self._watchdog.guard(self._client.messages.create, **kwargs)
             except Exception as exc:
