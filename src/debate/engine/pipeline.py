@@ -138,10 +138,7 @@ def run_benchmarks(
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = [pool.submit(_single) for _ in range(n)]
-        if sys.stdout.isatty():
-            results = _collect_with_progress(futures, n)
-        else:
-            results = [f.result() for f in as_completed(futures)]
+        results = _collect_with_progress(futures, n) if sys.stdout.isatty() else [f.result() for f in as_completed(futures)]
 
     _log.info(f"Benchmark complete | runs={n}")
     return results

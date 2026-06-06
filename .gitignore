@@ -17,6 +17,3 @@ logs/
 
 # Test coverage artifacts
 .coverage
-
-# Generated analysis graphs
-assets/

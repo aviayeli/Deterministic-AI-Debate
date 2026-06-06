@@ -34,7 +34,10 @@ def _v1_distance(agent: Any) -> float:
 
 
 class Judge:
-    """Evaluates a completed debate and produces a deterministic VerdictSchema via a 4-level tiebreaker: responsiveness → evidence quality → V₁ faithfulness → PRNG."""
+    """Evaluate a completed debate and produce a deterministic VerdictSchema.
+
+    4-level tiebreaker: responsiveness → evidence quality → V₁ faithfulness → PRNG.
+    """
 
     def evaluate_debate(
         self,
